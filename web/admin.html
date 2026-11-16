@@ -50,6 +50,26 @@
   .btn.xs { padding:4px 8px; font-size:12px; }
   .bar { height:7px; background:var(--sbg); border-radius:99px; overflow:hidden; min-width:80px; }
   .bar i { display:block; height:100%; background:var(--green); }
+  .rgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; }
+  .rcard { background:#fff; border:2px solid var(--line); border-radius:14px; padding:16px; cursor:pointer; transition:.15s; }
+  .rcard:hover { border-color:var(--brand); box-shadow:0 6px 18px rgba(3,105,161,.12); }
+  .rname { font-size:18px; font-weight:700; margin-bottom:4px; }
+  .rstats { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 8px; }
+  .rstat { border:1px solid var(--line); background:var(--sbg); border-radius:99px; padding:5px 12px; font-size:13px; font-weight:600; cursor:pointer; color:var(--text); }
+  .rstat.need { background:var(--rbg); color:var(--red); border-color:#fca5a5; } .rstat.plain { cursor:default; }
+  .ropen { color:var(--brand); font-weight:700; text-align:right; }
+  .rhead { display:flex; justify-content:space-between; align-items:center; gap:12px; background:linear-gradient(120deg,#0c4a6e,#0369a1); color:#fff;
+    border-radius:14px; padding:18px 20px; margin:12px 0; flex-wrap:wrap; }
+  .rhead.new { background:linear-gradient(120deg,#14532d,#15803d); }
+  .rhsmall { font-size:12px; letter-spacing:1.5px; font-weight:700; opacity:.8; } .rhname { font-size:24px; font-weight:800; margin:2px 0 4px; }
+  .stepsbar { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .stp { border:2px solid var(--line); background:#fff; border-radius:99px; padding:8px 16px; font-size:14px; font-weight:700; cursor:pointer; color:var(--muted); }
+  .stp.on { border-color:var(--brand); background:var(--brand); color:#fff; } .stp.off { cursor:default; }
+  .stp.todo:not(.on) { border-color:#fca5a5; color:var(--red); } .stp.ok:not(.on) { border-color:#86efac; color:var(--green); }
+  .arrow { color:var(--muted); font-weight:700; }
+  .forroute { background:#e0f2fe; color:#075985; padding:2px 10px; border-radius:8px; }
+  .colh { margin:4px 0 10px; font-size:14px; color:#334155; }
+  .seqn { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:50%; background:var(--brand); color:#fff; font-weight:700; font-size:13px; }
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; } @media (max-width:800px){ .grid2 { grid-template-columns:1fr; } }
   .days label { display:inline-flex; align-items:center; gap:3px; margin-right:6px; color:var(--text); font-size:13px; }
   .modal { position:fixed; inset:0; background:rgba(15,23,42,.55); display:flex; align-items:center; justify-content:center; z-index:30; padding:16px; }
@@ -122,6 +142,7 @@ function shell() {
   go(tab);
 }
 async function go(t) {
+  if (t === "routes" && typeof RT !== "undefined") RT = { id: null, step: "details" };
   tab = t;
   const pending = await sb.from("scans").select("id", { count:"exact", head:true }).is("reviewed_at", null)
     .or("status.eq.review,flags.ov.{OLD_QR,UNKNOWN_QR}").gte("scanned_at", new Date(Date.now() - 14 * 864e5).toISOString());
@@ -377,78 +398,169 @@ function printQr(ids) {
 const MEDIA_TEXT = { auto: "Auto (as in Settings)", photo: "📷 Photo", video: "🎥 10-sec video" };
 const nowHHMM = () => { const p = SSP.fmtTime(new Date(Date.now() + 15 * 60000)); const [h, mm] = p.split(":").map(Number); const q15 = Math.floor(mm / 15) * 15; return `${String(h).padStart(2, "0")}:${String(q15).padStart(2, "0")}`; };
 const hm = (t) => (t || "00:00").slice(0, 5);
-VIEWS.routes = async (m, selId) => {
+const fmtD = (d) => (d ? fmtDate(d + "T12:00:00+05:30") : "–");
+const mediaSel = (idAttr, v, autoLabel) => `<select ${idAttr}>${["auto", "photo", "video"].map((k) =>
+  `<option value="${k}" ${v === k ? "selected" : ""}>${k === "auto" ? autoLabel : MEDIA_TEXT[k]}</option>`).join("")}</select>`;
+const STEPS = [["details", "① Details"], ["places", "② Places"], ["times", "③ Round times"]];
+
+// Which route is open in the Routes tab: id = null (list), "new" (wizard) or a route id; step = details / places / times
+let RT = { id: null, step: "details" };
+function openRoute(id, step) { RT = { id, step: step || "details" }; VIEWS.routes(document.getElementById("main")); window.scrollTo(0, 0); }
+function routeList() { RT = { id: null, step: "details" }; VIEWS.routes(document.getElementById("main")); window.scrollTo(0, 0); }
+
+VIEWS.routes = async (m) => {
   const { cps, routes: allRoutes, guards } = await lookups();
-  const routes = allRoutes.filter((r) => r.active), inactive = allRoutes.filter((r) => !r.active);
-  const sel = routes.find((r) => r.id === (selId || m.dataset.sel)) || routes[0];
-  m.dataset.sel = sel?.id || "";
-  let rcs = [], scheds = [];
-  if (sel) [rcs, scheds] = await Promise.all([
-    q(sb.from("route_checkpoints").select("checkpoint_id, seq, media").eq("route_id", sel.id).order("seq")),
-    q(sb.from("schedules").select("*").eq("route_id", sel.id).order("start_time")),
+  const [allRc, allSch] = await Promise.all([
+    q(sb.from("route_checkpoints").select("route_id, checkpoint_id, seq, media").order("seq")),
+    q(sb.from("schedules").select("*").order("start_time")),
   ]);
-  const cpName = (id) => cps.find((c) => c.id === id)?.name || "?";
-  const mediaSel = (idAttr, v, autoLabel) => `<select ${idAttr}>${["auto", "photo", "video"].map((k) =>
-      `<option value="${k}" ${v === k ? "selected" : ""}>${k === "auto" ? autoLabel : MEDIA_TEXT[k]}</option>`).join("")}</select>`;
-  m.innerHTML = `<div class="card"><h3>New route</h3>
-      <div class="row"><div><label>Route name (English)</label><input id="rnew" placeholder="e.g. Night round – full campus"></div>
+  if (RT.id === "new") return renderNewRoute(m);
+  const sel = RT.id && allRoutes.find((r) => r.id === RT.id && r.active);
+  if (!sel) return renderRouteList(m, allRoutes, allRc, allSch);
+  renderRouteDetail(m, sel, cps, guards, allRc.filter((x) => x.route_id === sel.id), allSch.filter((x) => x.route_id === sel.id));
+};
+
+// ---------- 1. List of routes ----------
+function renderRouteList(m, allRoutes, allRc, allSch) {
+  const active = allRoutes.filter((r) => r.active), inactive = allRoutes.filter((r) => !r.active);
+  const card = (r) => {
+    const nP = allRc.filter((x) => x.route_id === r.id).length;
+    const nT = allSch.filter((x) => x.route_id === r.id && x.active).length;
+    const ready = nP > 0 && nT > 0;
+    return `<div class="rcard" onclick="openRoute('${r.id}', '${!nP ? "places" : !nT ? "times" : "details"}')">
+      <div class="row" style="justify-content:space-between;align-items:start">
+        <div class="rname">🛣️ ${esc(r.name)}</div>${ready ? `<span class="chip ok">✓ Ready</span>` : `<span class="chip missed">Needs setup</span>`}</div>
+      <div class="muted">Starts ${fmtD(r.start_date)} ${hm(r.start_time)}${r.end_date ? ` · until ${fmtD(r.end_date)}` : ""}</div>
+      <div class="rstats">
+        <button class="rstat ${nP ? "" : "need"}" onclick="event.stopPropagation();openRoute('${r.id}','places')">📍 ${nP} place${nP === 1 ? "" : "s"}${nP ? "" : " – add"}</button>
+        <button class="rstat ${nT ? "" : "need"}" onclick="event.stopPropagation();openRoute('${r.id}','times')">⏰ ${nT} round${nT === 1 ? "" : "s"}/day${nT ? "" : " – add"}</button>
+        <span class="rstat plain">${r.media_mode === "video" ? "🎥 Video" : r.media_mode === "photo" ? "📷 Photo" : "Auto proof"}</span>
+      </div>
+      <div class="ropen">Open route ➡️</div></div>`;
+  };
+  m.innerHTML = `
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h2 style="margin:0;font-size:22px">Routes</h2>
+      <button class="btn" style="font-size:16px;padding:10px 18px" onclick="openRoute('new')">＋ New route</button></div>
+    <p class="help">A route is <b>the places a guard walks to, in order</b>, at <b>fixed times</b> every day. Click a route to change its places or times.</p>
+    ${active.length ? `<div class="rgrid">${active.map(card).join("")}</div>`
+      : `<div class="card empty">No active routes yet.<br><br><button class="btn" onclick="openRoute('new')">＋ Create your first route</button></div>`}
+    ${inactive.length ? `<div class="card" style="background:#f8fafc;margin-top:18px"><h3>🗄️ Deactivated routes (${inactive.length})</h3>
+      <p class="help">These make no new rounds and do not appear on future days. Their past rounds stay in Reports.</p>
+      <table><tr><th>Route</th><th>Started</th><th>End date</th><th></th></tr>
+      ${inactive.map((r) => `<tr><td><b>${esc(r.name)}</b></td><td>${fmtD(r.start_date)} ${hm(r.start_time)}</td><td>${fmtD(r.end_date)}</td>
+        <td class="r"><button class="btn s xs" onclick="toggleRoute('${r.id}', true)">Activate again</button></td></tr>`).join("")}</table></div>` : ""}`;
+}
+
+// ---------- 2. New route (step 1 of 3) ----------
+function renderNewRoute(m) {
+  m.innerHTML = `<button class="btn s" onclick="routeList()">← All routes</button>
+    <div class="rhead new"><div><div class="rhsmall">NEW ROUTE</div><div class="rhname">🛣️ Create a route</div>
+      <div>Three easy steps. You can change everything later.</div></div></div>
+    <div class="stepsbar">${STEPS.map(([k, l], i) => `<span class="stp ${i === 0 ? "on" : "off"}">${l}</span>`).join('<span class="arrow">→</span>')}</div>
+    <div class="card"><h3>Step 1 of 3 · Route details</h3>
+      <div class="row"><div><label>Route name (English)</label><input id="rnew" placeholder="e.g. Night round – full campus" style="width:300px"></div>
         <div><label>Start date</label><input id="rstart" type="date" value="${todayISO()}"></div>
         <div><label>Start time</label><input id="rstartt" type="time" value="${nowHHMM()}"></div>
         <div><label>End date (optional)</label><input id="rend" type="date"></div>
-        <div><label>Proof at each place</label>${mediaSel('id="rmedia"', "auto", MEDIA_TEXT.auto)}</div>
-        <button class="btn" onclick="addRoute()">Create route</button></div></div>
-    ${routes.length ? `<div class="card"><div class="row"><div><label>Active route</label><select id="rsel">${routes.map((r) => `<option value="${r.id}" ${r.id === sel?.id ? "selected" : ""}>${esc(r.name)} · from ${fmtDate(r.start_date + "T12:00:00+05:30")} ${hm(r.start_time)}</option>`).join("")}</select></div>
+        <div><label>Proof at each place</label>${mediaSel('id="rmedia"', "auto", MEDIA_TEXT.auto)}</div></div>
+      <p class="help" style="margin-top:10px">Guards will see the name in Hindi and Gujarati automatically: <span id="rprev" class="muted"></span></p>
+      <div class="row" style="justify-content:flex-end;margin-top:6px"><button class="btn s" onclick="routeList()">Cancel</button>
+        <button class="btn" onclick="addRoute()">Create route and add places ➡️</button></div></div>`;
+  const prev = () => { const v = rnew.value.trim(); rprev.textContent = v ? `${AUTO(v, "hi")} · ${AUTO(v, "gu")}` : ""; };
+  rnew.oninput = prev; rnew.focus();
+}
+
+// ---------- 3. One route: header + steps ----------
+function renderRouteDetail(m, sel, cps, guards, rcs, scheds) {
+  const step = RT.step;
+  const nP = rcs.length, nT = scheds.filter((s) => s.active).length;
+  const done = { details: true, places: nP > 0, times: nT > 0 };
+  const cpById = (id) => cps.find((c) => c.id === id);
+  const head = `<button class="btn s" onclick="routeList()">← All routes</button>
+    <div class="rhead"><div><div class="rhsmall">EDITING ROUTE</div><div class="rhname">🛣️ ${esc(sel.name)}</div>
+        <div>Starts ${fmtD(sel.start_date)} ${hm(sel.start_time)}${sel.end_date ? ` · until ${fmtD(sel.end_date)}` : ""} · 📍 ${nP} places · ⏰ ${nT} rounds/day</div></div>
       <button class="btn d" onclick="toggleRoute('${sel.id}', false)">Deactivate route</button></div>
-      <h3 style="margin-top:14px">Route settings</h3>
-      <div class="row"><div><label>Name (English)</label><input id="rn" value="${esc(sel.name)}"></div>
+    <div class="stepsbar">${STEPS.map(([k, l]) => `<button class="stp ${k === step ? "on" : ""} ${done[k] ? "ok" : "todo"}" onclick="openRoute('${sel.id}','${k}')">
+        ${l}${k === "places" ? ` (${nP})` : k === "times" ? ` (${nT})` : ""} ${done[k] ? "✓" : "⚠️"}</button>`).join('<span class="arrow">→</span>')}</div>`;
+  const nav = (back, next, nextLabel) => `<div class="row" style="justify-content:space-between;margin-top:14px">
+      ${back ? `<button class="btn s" onclick="openRoute('${sel.id}','${back}')">⬅️ Back</button>` : "<span></span>"}
+      ${next ? `<button class="btn" onclick="openRoute('${sel.id}','${next}')">${nextLabel} ➡️</button>`
+             : `<button class="btn g" onclick="routeList()">✓ Finish</button>`}</div>`;
+  const forRoute = `<span class="forroute">${esc(sel.name)}</span>`;
+  let body = "";
+  if (step === "details") {
+    body = `<div class="card"><h3>Step 1 of 3 · Details of ${forRoute}</h3>
+      <div class="row"><div><label>Name (English)</label><input id="rn" value="${esc(sel.name)}" style="width:280px"></div>
         <div><label>Start date</label><input id="rs" type="date" value="${sel.start_date || ""}"></div>
         <div><label>Start time</label><input id="rst" type="time" value="${hm(sel.start_time)}"></div>
         <div><label>End date (optional)</label><input id="re" type="date" value="${sel.end_date || ""}"></div>
         <div><label>Proof at each place</label>${mediaSel('id="rm"', sel.media_mode, MEDIA_TEXT.auto)}</div></div>
       ${trInputs("rt", sel, "name", "Name")}
-      <div class="row" style="margin-top:10px"><button class="btn" onclick="saveRoute('${sel.id}')">Save route settings</button>
-        <span class="muted">Rounds are created only from ${fmtDate(sel.start_date + "T12:00:00+05:30")} ${hm(sel.start_time)}${sel.end_date ? " until " + fmtDate(sel.end_date + "T12:00:00+05:30") : ""}.</span></div></div>` : ""}
-    ${sel ? `<div class="grid2">
-      <div class="card"><h3>Checkpoints in order</h3><p class="help">Guard sees them in this order. For each place choose photo or video — e.g. <b>video</b> for gates and parking where you want to see the surroundings.</p>
-        <table>${rcs.map((rc, i) => `<tr><td>${i + 1}</td><td>${esc(cpName(rc.checkpoint_id))}</td>
-          <td>${mediaSel(`onchange="setCpMedia('${rc.checkpoint_id}', this.value)"`, rc.media, "Same as route")}</td><td class="r">
-          <button class="btn s xs" onclick="moveCp(${i},-1)" ${i ? "" : "disabled"}>↑</button><button class="btn s xs" onclick="moveCp(${i},1)" ${i < rcs.length - 1 ? "" : "disabled"}>↓</button>
-          <button class="btn s xs" onclick="moveCp(${i},0)">✕</button></td></tr>`).join("") || `<tr><td class="muted">No checkpoints yet</td></tr>`}</table>
-        <div class="row" style="margin-top:10px"><select id="addcp">${cps.filter((c) => c.active && !rcs.some((r) => r.checkpoint_id === c.id)).map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select>
-          <button class="btn s" onclick="moveCp(-1, 'add')">Add to route</button></div></div>
-      <div class="card"><h3>Round times</h3><p class="help">Each time creates one round per day (from the start date). The guard must finish all checkpoints inside the window.</p>
-        <table><tr><th>Start</th><th>Window</th><th>Days</th><th>Guard</th><th></th></tr>
-        ${scheds.map((s) => `<tr><td><b>${s.start_time.slice(0, 5)}</b></td><td>${s.window_minutes} min</td>
-          <td>${s.days.length === 7 ? "Daily" : s.days.map((d) => DAYS[d]).join(" ")}</td>
-          <td>${esc(guards.find((g) => g.id === s.guard_id)?.code || "Any")}</td>
-          <td class="r"><button class="btn s xs" onclick="toggleSched('${s.id}', ${!s.active})">${s.active ? "Pause" : "Resume"}</button>
-          <button class="btn s xs" onclick="delSched('${s.id}')">✕</button></td></tr>`).join("") || `<tr><td class="muted" colspan="5">No times yet</td></tr>`}</table>
-        <h3 style="margin-top:16px">Add times</h3>
-        <div class="row"><div><label>From</label><input id="sf" type="time" value="22:00"></div><div><label>To</label><input id="st" type="time" value="06:00"></div>
-          <div><label>Every (min)</label><input id="se" type="number" value="120" style="width:80px"></div>
-          <div><label>Window (min)</label><input id="sw" type="number" value="45" style="width:80px"></div></div>
-        <div class="days" style="margin:8px 0">${DAYS.map((d, i) => `<label><input type="checkbox" class="sd" value="${i}" checked>${d}</label>`).join("")}</div>
-        <div class="row"><div><label>Guard (optional)</label><select id="sg"><option value="">Any guard on duty</option>${guards.filter((g) => g.active).map((g) => `<option value="${g.id}">${esc(g.code)} · ${esc(g.name)}</option>`).join("")}</select></div>
-          <button class="btn" onclick="addScheds()">Add</button></div>
-        <p class="help" style="margin-top:8px">Tip: for a single round set From = To.</p></div></div>` : `<div class="empty">${inactive.length ? "No active routes. Create one above or activate one below." : "Create your first route above."}</div>`}
-    ${inactive.length ? `<div class="card" style="background:#f8fafc"><h3>🗄️ Deactivated routes (${inactive.length})</h3>
-      <p class="help">These make no new rounds and do not appear in future days. Their past rounds stay in Reports.</p>
-      <table><tr><th>Route</th><th>Started</th><th>End date</th><th></th></tr>
-      ${inactive.map((r) => `<tr><td><b>${esc(r.name)}</b></td><td>${fmtDate(r.start_date + "T12:00:00+05:30")} ${hm(r.start_time)}</td>
-        <td>${r.end_date ? fmtDate(r.end_date + "T12:00:00+05:30") : "–"}</td>
-        <td class="r"><button class="btn s xs" onclick="toggleRoute('${r.id}', true)">Activate again</button></td></tr>`).join("")}</table></div>` : ""}`;
-  const rs = document.getElementById("rsel"); if (rs) rs.onchange = (e) => VIEWS.routes(m, e.target.value);
-  window._rcs = rcs.map((r) => ({ checkpoint_id: r.checkpoint_id, media: r.media || "auto" })); window._route = sel?.id;
-};
+      <div class="row" style="margin-top:12px"><button class="btn" onclick="saveRoute('${sel.id}')">💾 Save details</button>
+        <span class="muted">Rounds are created only from ${fmtD(sel.start_date)} ${hm(sel.start_time)}${sel.end_date ? " until " + fmtD(sel.end_date) : ""}.</span></div>
+      ${nav(null, "places", "Next: Places")}</div>`;
+  } else if (step === "places") {
+    const avail = cps.filter((c) => c.active && !rcs.some((r) => r.checkpoint_id === c.id));
+    body = `<div class="card"><h3>Step 2 of 3 · Places in ${forRoute}</h3>
+      <p class="help">Add the places the guard must visit, then put them in walking order with ↑ ↓. For each place you can ask for a photo or a 10-second video.</p>
+      ${!cps.length ? `<div class="empty">No checkpoints exist yet. First add them in <a href="#" onclick="go('checkpoints');return false">Checkpoints &amp; QR</a>.</div>` : `
+      <div class="grid2">
+        <div><h4 class="colh">✅ In this route – walking order (${nP})</h4>
+          ${nP ? `<table>${rcs.map((rc, i) => `<tr><td style="width:28px"><span class="seqn">${i + 1}</span></td>
+            <td><b>${esc(cpById(rc.checkpoint_id)?.name || "?")}</b><br><span class="muted" style="font-size:12px">${esc(cpById(rc.checkpoint_id)?.area || "")}</span></td>
+            <td>${mediaSel(`onchange="setCpMedia('${rc.checkpoint_id}', this.value)"`, rc.media, "Same as route")}</td>
+            <td class="r" style="white-space:nowrap"><button class="btn s xs" onclick="moveCp(${i},-1)" ${i ? "" : "disabled"}>↑</button><button class="btn s xs" onclick="moveCp(${i},1)" ${i < nP - 1 ? "" : "disabled"}>↓</button>
+            <button class="btn s xs" title="Remove from route" onclick="moveCp(${i},0)">✕</button></td></tr>`).join("")}</table>`
+          : `<div class="empty" style="border:2px dashed var(--line);border-radius:10px">No places yet.<br>Click <b>＋ Add</b> on the right →</div>`}</div>
+        <div><h4 class="colh">➕ Add places (${avail.length} available)
+            ${avail.length > 1 ? `<button class="btn s xs" style="float:right" onclick="addAllCps()">＋ Add all</button>` : ""}</h4>
+          ${avail.length ? `<table>${avail.map((c) => `<tr><td><b>${esc(c.name)}</b><br><span class="muted" style="font-size:12px">${esc(c.area || "")}</span></td>
+            <td class="r"><button class="btn xs" onclick="addCpToRoute('${c.id}')">＋ Add</button></td></tr>`).join("")}</table>`
+          : `<div class="empty">All checkpoints are in this route. Need another? Add it in <a href="#" onclick="go('checkpoints');return false">Checkpoints &amp; QR</a>.</div>`}</div>
+      </div>`}
+      ${nav("details", "times", "Next: Round times")}</div>`;
+  } else {
+    const perDay = scheds.filter((s) => s.active).length;
+    body = `<div class="card"><h3>Step 3 of 3 · Round times for ${forRoute}</h3>
+      <p class="help">Each time below is one round per day. The guard must visit all ${nP} place${nP === 1 ? "" : "s"} within the window.</p>
+      <div class="grid2">
+        <div><h4 class="colh">⏰ Times (${perDay} rounds per day)</h4>
+          <table><tr><th>Start</th><th>Window</th><th>Days</th><th>Guard</th><th></th></tr>
+          ${scheds.map((s) => `<tr style="${s.active ? "" : "opacity:.5"}"><td><b>${s.start_time.slice(0, 5)}</b></td><td>${s.window_minutes} min</td>
+            <td>${s.days.length === 7 ? "Daily" : s.days.map((d) => DAYS[d]).join(" ")}</td>
+            <td>${esc(guards.find((g) => g.id === s.guard_id)?.code || "Any")}</td>
+            <td class="r" style="white-space:nowrap"><button class="btn s xs" onclick="toggleSched('${s.id}', ${!s.active})">${s.active ? "Pause" : "Resume"}</button>
+            <button class="btn s xs" onclick="delSched('${s.id}')">✕</button></td></tr>`).join("") || `<tr><td class="muted" colspan="5" style="padding:20px;text-align:center">No times yet – add them on the right →</td></tr>`}</table></div>
+        <div><h4 class="colh">➕ Add times</h4>
+          <div class="row"><div><label>From</label><input id="sf" type="time" value="22:00"></div><div><label>To</label><input id="st" type="time" value="06:00"></div>
+            <div><label>Every (minutes)</label><input id="se" type="number" value="120" style="width:90px"></div>
+            <div><label>Time to finish (min)</label><input id="sw" type="number" value="45" style="width:90px"></div></div>
+          <div class="days" style="margin:10px 0">${DAYS.map((d, i) => `<label><input type="checkbox" class="sd" value="${i}" checked>${d}</label>`).join("")}</div>
+          <div class="row"><div><label>Guard (optional)</label><select id="sg"><option value="">Any guard on duty</option>${guards.filter((g) => g.active).map((g) => `<option value="${g.id}">${esc(g.code)} · ${esc(g.name)}</option>`).join("")}</select></div>
+            <button class="btn" onclick="addScheds()">＋ Add times</button></div>
+          <p class="help" id="schedPrev" style="margin-top:8px"></p>
+          <p class="help">Example: From 22:00 To 06:00 Every 120 → rounds at 22:00, 00:00, 02:00, 04:00, 06:00. For a single round set From = To.</p></div>
+      </div>
+      ${nav("places", null)}</div>`;
+  }
+  m.innerHTML = head + body;
+  window._rcs = rcs.map((r) => ({ checkpoint_id: r.checkpoint_id, media: r.media || "auto" })); window._route = sel.id;
+  if (step === "times") {
+    const prev = () => { const r = schedRows(); schedPrev.innerHTML = r.length ? `Will add <b>${r.length}</b> round${r.length === 1 ? "" : "s"}: ${r.map((x) => x.start_time).join(", ")}` : ""; };
+    ["sf", "st", "se"].forEach((id) => (document.getElementById(id).oninput = prev)); prev();
+  }
+}
+
 async function addRoute() {
   if (!rnew.value.trim()) return toast("Enter a route name", "err");
-  if (!rstart.value) return toast("Choose a start date", "err");
+  if (!rstart.value || !rstartt.value) return toast("Choose a start date and time", "err");
   if (rend.value && rend.value < rstart.value) return toast("End date is before start date", "err");
-  if (!rstartt.value) return toast("Choose a start time", "err");
   const dup = cache.routes.find((r) => r.active && r.name.trim().toLowerCase() === rnew.value.trim().toLowerCase() && r.start_date === rstart.value && hm(r.start_time) === rstartt.value);
   if (dup) return toast("A route with the same name, start date and start time already exists.", "err");
   const [r] = await q(sb.from("routes").insert({ name: rnew.value.trim(), start_date: rstart.value, start_time: rstartt.value, end_date: rend.value || null, media_mode: rmedia.value }).select());
-  document.getElementById("main").dataset.sel = r.id; toast("Route created"); go("routes");
+  toast(`Route “${r.name}” created. Now add its places.`);
+  openRoute(r.id, "places");
 }
 async function saveRoute(id) {
   const $ = (x) => document.getElementById(x), name = $("rn").value.trim(), sd = $("rs").value, ed = $("re").value, stt = $("rst").value || "00:00";
@@ -458,7 +570,7 @@ async function saveRoute(id) {
   if (ed && ed < sd) return toast("End date is before start date", "err");
   await q(sb.from("routes").update({ name, start_date: sd, start_time: stt, end_date: ed || null, media_mode: $("rm").value,
     name_hi: val("rt_hi"), name_gu: val("rt_gu") }).eq("id", id));
-  toast("Route saved"); VIEWS.routes(document.getElementById("main"), id);
+  toast("Details saved"); openRoute(id, "details");
 }
 async function toggleRoute(id, active) {
   const r = cache.routes.find((x) => x.id === id);
@@ -469,36 +581,51 @@ async function toggleRoute(id, active) {
   }
   await q(sb.from("routes").update({ active }).eq("id", id));
   toast(active ? "Route activated" : "Route deactivated");
-  if (active) document.getElementById("main").dataset.sel = id;
-  go("routes");
+  active ? openRoute(id, "details") : routeList();
 }
 async function setCpMedia(cpId, media) {
   await q(sb.from("route_checkpoints").update({ media }).eq("route_id", window._route).eq("checkpoint_id", cpId));
   const x = window._rcs.find((r) => r.checkpoint_id === cpId); if (x) x.media = media;
   toast(media === "video" ? "This place will need a 10-sec video" : media === "photo" ? "This place will need a photo" : "Same as route");
 }
-async function moveCp(i, dir) {
-  const list = window._rcs.map((x) => ({ ...x }));
-  if (dir === "add") { if (!addcp.value) return; list.push({ checkpoint_id: addcp.value, media: "auto" }); }
-  else if (dir === 0) list.splice(i, 1);
-  else { const j = i + dir; [list[i], list[j]] = [list[j], list[i]]; }
+async function saveRouteCps(list) {
   await q(sb.from("route_checkpoints").delete().eq("route_id", window._route));
   if (list.length) await q(sb.from("route_checkpoints").insert(list.map((c, k) => ({ route_id: window._route, checkpoint_id: c.checkpoint_id, seq: k + 1, media: c.media }))));
-  VIEWS.routes(document.getElementById("main"), window._route);
+  openRoute(window._route, "places");
 }
-async function addScheds() {
+async function moveCp(i, dir) {
+  const list = window._rcs.map((x) => ({ ...x }));
+  if (dir === 0) list.splice(i, 1);
+  else { const j = i + dir; [list[i], list[j]] = [list[j], list[i]]; }
+  await saveRouteCps(list);
+}
+async function addCpToRoute(cpId) {
+  const list = window._rcs.map((x) => ({ ...x })); list.push({ checkpoint_id: cpId, media: "auto" });
+  await saveRouteCps(list); toast("Place added");
+}
+async function addAllCps() {
+  const list = window._rcs.map((x) => ({ ...x }));
+  cache.cps.filter((c) => c.active && !list.some((x) => x.checkpoint_id === c.id)).forEach((c) => list.push({ checkpoint_id: c.id, media: "auto" }));
+  await saveRouteCps(list); toast("All places added");
+}
+function schedRows() {
   const days = [...document.querySelectorAll(".sd:checked")].map((x) => +x.value);
-  if (!days.length) return toast("Pick at least one day", "err");
   const toMin = (v) => +v.slice(0, 2) * 60 + +v.slice(3, 5);
+  if (!sf.value || !st.value) return [];
   let a = toMin(sf.value), b = toMin(st.value), every = Math.max(15, +se.value || 60);
   if (b < a) b += 1440;
   const rows = [];
-  for (let x = a; x <= b; x += every) { const mm = x % 1440; rows.push({ route_id: window._route, start_time: `${String(Math.floor(mm / 60)).padStart(2, "0")}:${String(mm % 60).padStart(2, "0")}`, window_minutes: +sw.value || 45, days, guard_id: sg.value || null }); }
-  if (rows.length > 48) return toast("Too many times — increase 'Every'", "err");
-  await q(sb.from("schedules").insert(rows)); toast(`${rows.length} time(s) added`); VIEWS.routes(document.getElementById("main"), window._route);
+  for (let x = a; x <= b && rows.length <= 48; x += every) { const mm = x % 1440; rows.push({ route_id: window._route, start_time: `${String(Math.floor(mm / 60)).padStart(2, "0")}:${String(mm % 60).padStart(2, "0")}`, window_minutes: +sw.value || 45, days, guard_id: sg.value || null }); }
+  return rows;
 }
-async function toggleSched(id, active) { await q(sb.from("schedules").update({ active }).eq("id", id)); VIEWS.routes(document.getElementById("main"), window._route); }
-async function delSched(id) { if (!confirm("Delete this time? Past rounds stay in the records.")) return; await q(sb.from("schedules").delete().eq("id", id)); VIEWS.routes(document.getElementById("main"), window._route); }
+async function addScheds() {
+  const rows = schedRows();
+  if (!rows.length || !rows[0].days.length) return toast("Pick at least one day", "err");
+  if (rows.length > 48) return toast("Too many times — increase 'Every'", "err");
+  await q(sb.from("schedules").insert(rows)); toast(`${rows.length} round time(s) added`); openRoute(window._route, "times");
+}
+async function toggleSched(id, active) { await q(sb.from("schedules").update({ active }).eq("id", id)); openRoute(window._route, "times"); }
+async function delSched(id) { if (!confirm("Delete this time? Past rounds stay in the records.")) return; await q(sb.from("schedules").delete().eq("id", id)); openRoute(window._route, "times"); }
 
 // ---------- Guards ----------
 VIEWS.guards = async (m) => {
