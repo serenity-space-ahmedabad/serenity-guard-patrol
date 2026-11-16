@@ -206,8 +206,8 @@ const freshGps = () => (gps && Date.now() - gps.at < 60000 ? gps : null);
 // ====================== HEADER / LANGUAGE ======================
 function tools(showVoice = true) {
   return `<div class="tools">${[["hi", "हिं"], ["gu", "ગુ"], ["en", "EN"]].map(([k, l]) =>
-    `<button class="${k === lang ? "on" : ""}" onclick="setLang('${k}')">${l}</button>`).join("")}
-    ${showVoice ? `<button onclick="toggleVoice()" title="voice">${voiceOn ? "🔊" : "🔇"}</button>` : ""}</div>`;
+    `<button data-nobusy class="${k === lang ? "on" : ""}" onclick="setLang('${k}')">${l}</button>`).join("")}
+    ${showVoice ? `<button data-nobusy onclick="toggleVoice()" title="voice">${voiceOn ? "🔊" : "🔇"}</button>` : ""}</div>`;
 }
 function setLang(k) {
   lang = k; localStorage.setItem("ssp_lang", k); document.documentElement.lang = k;
@@ -240,7 +240,7 @@ function renderLogin(msg) {
           : `<label>${t("email")}</label><input id="code" type="email" autocomplete="username">
              <label>${t("password")}</label><input id="pin" type="password" autocomplete="current-password">`}
       <button class="big" id="go"><span class="i">➡️</span>${t("login")}</button>
-      ${g ? `<button class="link" style="display:block;margin:10px auto 0" onclick="say('login')">🔊 ${t("hearAgain")}</button>` : ""}
+      ${g ? `<button data-nobusy class="link" style="display:block;margin:10px auto 0" onclick="say('login')">🔊 ${t("hearAgain")}</button>` : ""}
       ${msg ? `<p style="color:#fca5a5;text-align:center;font-size:18px;font-weight:700">${esc(msg)}</p>` : ""}
     </div>
     <div class="foot">Serenity Space Co-operative Housing Society</div>`;
@@ -254,7 +254,7 @@ function renderLogin(msg) {
     boot();
   };
 }
-async function logout() { await sb.auth.signOut(); home = null; openSeen = null; renderLogin(); }
+async function logout() { window.speechSynthesis?.cancel(); await sb.auth.signOut(); home = null; openSeen = null; lastSpoken = ""; renderLogin(); }
 
 // ====================== HOME ======================
 async function loadHome() {
@@ -286,7 +286,7 @@ function renderHome() {
         ${cp.media === "video" ? `<div class="vid">🎥 ${t("video")}</div>` : ""}
         <button class="big" onclick="startScan('${cur.id}')"><span class="i">📷</span>${t("scanBtn")}</button>
         <div class="row2">
-          <button class="mid" onclick="repeatSay()"><span class="i">🔊</span>${t("hearAgain")}</button>
+          <button data-nobusy class="mid" onclick="repeatSay()"><span class="i">🔊</span>${t("hearAgain")}</button>
           <button class="mid warnb" onclick="openNoQr('${cur.id}')"><span class="i">⚠️</span>${t("qrProblem")}</button>
         </div>
         <div class="due">⏰ ${t("finishBy", { t: fmtTime(cur.due_end) })}</div>
@@ -307,13 +307,14 @@ function renderHome() {
     if (lastSpoken !== key) { lastSpoken = key; doneOpen ? say("roundDone") : say("noRound", () => nt); }
   }
   app.innerHTML = `
-    <header><div class="brand">👤 ${esc(LN(home.guard.name))}<small>${esc(home.guard.code)} · ${t("sub")}</small></div>${tools()}</header>
+    <header><div class="brand">👤 ${esc(LN(home.guard.name))}<small>${esc(home.guard.code)} · ${t("sub")}</small></div>
+      <button class="logoutBtn" onclick="logout()">⏻ ${t("logout")}</button></header>
+    <div class="toolrow">${tools()}</div>
     <div class="clock"><div class="t" id="clk">${fmtTime(now, true)}</div><div class="d">${t("server")}<br>${fmtDate(now)}</div></div>
     ${home.device_ok ? "" : `<div class="warn">⚠️ ${t("phoneWarn")}</div>`}
     ${gpsDenied ? `<div class="warn">📍 ${t("gpsOff")}</div>` : ""}
     ${alertsTile()}
-    ${main}
-    <div class="foot"><button class="link" onclick="logout()">${t("logout")}</button></div>`;
+    ${main}`;
 }
 
 // New round opened since last check → ring, speak, banner, phone notification
@@ -548,7 +549,7 @@ function showResult({ ico, title, sub = "", next = null, round = null, retry = n
         <div class="ico">${placeIcon(next)}</div><div class="name">${esc(pickL(next, "name"))}</div>
         ${next.area ? `<div class="area">${esc(pickL(next, "area"))}</div>` : ""}
         <button class="big" onclick="startScan('${round.id}')"><span class="i">📷</span>${t("scanBtn")}</button>
-        <div class="row2"><button class="mid" onclick="repeatSay()"><span class="i">🔊</span>${t("hearAgain")}</button>
+        <div class="row2"><button data-nobusy class="mid" onclick="repeatSay()"><span class="i">🔊</span>${t("hearAgain")}</button>
           <button class="mid warnb" onclick="openNoQr('${round.id}')"><span class="i">⚠️</span>${t("qrProblem")}</button></div></div>` : ""}
     ${complete ? `<div class="status done" style="margin-top:20px"><div class="ico">🎉</div><h2>${t("roundDone")}</h2></div>` : ""}
     ${retry ? `<button class="big" onclick="startScan('${retry}')"><span class="i">🔁</span>${t("tryAgain")}</button>
@@ -591,7 +592,7 @@ function noQrNote(err) {
   const reasonIcon = REASONS.find(([k]) => k === NQ.reason)[1];
   flowShow(`<h2>${reasonIcon} ${t("r_" + NQ.reason)}</h2>
     <div class="card" style="text-align:center">${placeIcon(NQ.cp)} <b style="font-size:20px">${esc(pickL(NQ.cp, "name"))}</b></div>
-    ${R ? `<button class="mic" id="micBtn" onclick="toggleMic()">🎤 ${t("speakReason")}</button>` : ""}
+    ${R ? `<button data-nobusy class="mic" id="micBtn" onclick="toggleMic()">🎤 ${t("speakReason")}</button>` : ""}
     <label>✍️ ${t("typeHere")}</label><textarea id="noteTxt">${esc(NQ.note)}</textarea>
     ${err ? `<p style="color:#fca5a5;font-weight:700;text-align:center">${esc(err)}</p>` : ""}
     <button class="big" onclick="noQrGo()"><span class="i">🎥</span>${t("startVideo")}</button>

@@ -1,3 +1,36 @@
+// Tap feedback: the tapped button shows a spinner and dims; a bar runs at the top while the server is working.
+(function () {
+  const css = `
+    button { transition: transform .08s ease, filter .15s ease, opacity .15s ease; }
+    button:active { transform: scale(.96); }
+    button.busy { position: relative; pointer-events: none; opacity: .78; filter: saturate(.75); }
+    button.busy::after { content: ""; display: inline-block; width: .95em; height: .95em; margin-left: .55em; vertical-align: -.12em;
+      border: .17em solid currentColor; border-right-color: transparent; border-radius: 50%; animation: sspspin .7s linear infinite; flex: none; }
+    @keyframes sspspin { to { transform: rotate(360deg); } }
+    #sspbar { position: fixed; left: 0; top: 0; height: 4px; width: 100%; z-index: 99999; pointer-events: none; display: none;
+      background: linear-gradient(90deg, transparent, #38bdf8, #22c55e, transparent) no-repeat; background-size: 45% 100%; animation: sspbar 1s linear infinite; }
+    @keyframes sspbar { from { background-position: -45% 0; } to { background-position: 145% 0; } }`;
+  const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
+  const bar = document.createElement("div"); bar.id = "sspbar"; (document.body || document.documentElement).appendChild(bar);
+  let inflight = 0;
+  const clearBusy = () => document.querySelectorAll("button.busy").forEach((b) => b.classList.remove("busy"));
+  const orig = window.fetch.bind(window);
+  window.fetch = async (...a) => {
+    inflight++; bar.style.display = "block";
+    try { return await orig(...a); }
+    finally { inflight--; if (!inflight) setTimeout(() => { if (!inflight) { bar.style.display = "none"; clearBusy(); } }, 250); }
+  };
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest && e.target.closest("button");
+    if (!b || b.disabled || b.hasAttribute("data-nobusy")) return;
+    navigator.vibrate?.(25);
+    b.classList.add("busy");
+    setTimeout(() => { if (!inflight) b.classList.remove("busy"); }, 700);   // instant actions
+    setTimeout(() => b.classList.remove("busy"), 10000);                     // safety
+  }, true);
+  window.SSP_BUSY = { clear: clearBusy };
+})();
+
 // Shared helpers for guard app and admin dashboard
 (function () {
   const cfg = window.SSP_CONFIG || {};

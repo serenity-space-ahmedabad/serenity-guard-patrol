@@ -79,7 +79,8 @@ let tab = "today", cache = {}, me = null;
 const todayISO = () => SSP.isoDateIST(new Date());
 const addDays = (iso, n) => { const d = new Date(iso + "T12:00:00+05:30"); d.setDate(d.getDate() + n); return SSP.isoDateIST(d); };
 const dayStart = (iso) => iso + "T00:00:00+05:30";
-const q = async (p) => { const { data, error } = await p; if (error) { toast(error.message, "err"); throw error; } return data; };
+const friendly = (e) => (e?.code === "23505" && /routes_unique_active/.test(e.message || "")) ? "A route with the same name, start date and start time already exists." : (e?.message || String(e));
+const q = async (p) => { const { data, error } = await p; if (error) { toast(friendly(error), "err"); throw error; } return data; };
 const flagHtml = (fl) => (fl || []).map((f) => `<span class="flag ${["OLD_QR","UNKNOWN_QR"].includes(f) ? "f" : ""}" title="${esc(FLAG_TEXT[f] || f)}">${esc(FLAG_TEXT[f] || f)}</span>`).join("");
 const STATUS_TEXT = { completed:"Completed", partial:"Partly done", missed:"Missed", in_progress:"In progress", due:"Due now", upcoming:"Upcoming",
                       ok:"OK", review:"Check", rejected:"Rejected" };
@@ -374,8 +375,11 @@ function printQr(ids) {
 
 // ---------- Routes & times ----------
 const MEDIA_TEXT = { auto: "Auto (as in Settings)", photo: "📷 Photo", video: "🎥 10-sec video" };
+const nowHHMM = () => { const p = SSP.fmtTime(new Date(Date.now() + 15 * 60000)); const [h, mm] = p.split(":").map(Number); const q15 = Math.floor(mm / 15) * 15; return `${String(h).padStart(2, "0")}:${String(q15).padStart(2, "0")}`; };
+const hm = (t) => (t || "00:00").slice(0, 5);
 VIEWS.routes = async (m, selId) => {
-  const { cps, routes, guards } = await lookups();
+  const { cps, routes: allRoutes, guards } = await lookups();
+  const routes = allRoutes.filter((r) => r.active), inactive = allRoutes.filter((r) => !r.active);
   const sel = routes.find((r) => r.id === (selId || m.dataset.sel)) || routes[0];
   m.dataset.sel = sel?.id || "";
   let rcs = [], scheds = [];
@@ -389,19 +393,21 @@ VIEWS.routes = async (m, selId) => {
   m.innerHTML = `<div class="card"><h3>New route</h3>
       <div class="row"><div><label>Route name (English)</label><input id="rnew" placeholder="e.g. Night round – full campus"></div>
         <div><label>Start date</label><input id="rstart" type="date" value="${todayISO()}"></div>
+        <div><label>Start time</label><input id="rstartt" type="time" value="${nowHHMM()}"></div>
         <div><label>End date (optional)</label><input id="rend" type="date"></div>
         <div><label>Proof at each place</label>${mediaSel('id="rmedia"', "auto", MEDIA_TEXT.auto)}</div>
         <button class="btn" onclick="addRoute()">Create route</button></div></div>
-    ${routes.length ? `<div class="card"><div class="row"><div><label>Route</label><select id="rsel">${routes.map((r) => `<option value="${r.id}" ${r.id === sel?.id ? "selected" : ""}>${esc(r.name)}${r.active ? "" : " (inactive)"}</option>`).join("")}</select></div>
-      <button class="btn s" onclick="toggleRoute('${sel.id}', ${!sel.active})">${sel.active ? "Deactivate" : "Activate"} route</button></div>
+    ${routes.length ? `<div class="card"><div class="row"><div><label>Active route</label><select id="rsel">${routes.map((r) => `<option value="${r.id}" ${r.id === sel?.id ? "selected" : ""}>${esc(r.name)} · from ${fmtDate(r.start_date + "T12:00:00+05:30")} ${hm(r.start_time)}</option>`).join("")}</select></div>
+      <button class="btn d" onclick="toggleRoute('${sel.id}', false)">Deactivate route</button></div>
       <h3 style="margin-top:14px">Route settings</h3>
       <div class="row"><div><label>Name (English)</label><input id="rn" value="${esc(sel.name)}"></div>
         <div><label>Start date</label><input id="rs" type="date" value="${sel.start_date || ""}"></div>
+        <div><label>Start time</label><input id="rst" type="time" value="${hm(sel.start_time)}"></div>
         <div><label>End date (optional)</label><input id="re" type="date" value="${sel.end_date || ""}"></div>
         <div><label>Proof at each place</label>${mediaSel('id="rm"', sel.media_mode, MEDIA_TEXT.auto)}</div></div>
       ${trInputs("rt", sel, "name", "Name")}
       <div class="row" style="margin-top:10px"><button class="btn" onclick="saveRoute('${sel.id}')">Save route settings</button>
-        <span class="muted">Rounds are created only from the start date${sel.end_date ? " until the end date" : ""}.</span></div></div>` : ""}
+        <span class="muted">Rounds are created only from ${fmtDate(sel.start_date + "T12:00:00+05:30")} ${hm(sel.start_time)}${sel.end_date ? " until " + fmtDate(sel.end_date + "T12:00:00+05:30") : ""}.</span></div></div>` : ""}
     ${sel ? `<div class="grid2">
       <div class="card"><h3>Checkpoints in order</h3><p class="help">Guard sees them in this order. For each place choose photo or video — e.g. <b>video</b> for gates and parking where you want to see the surroundings.</p>
         <table>${rcs.map((rc, i) => `<tr><td>${i + 1}</td><td>${esc(cpName(rc.checkpoint_id))}</td>
@@ -424,7 +430,13 @@ VIEWS.routes = async (m, selId) => {
         <div class="days" style="margin:8px 0">${DAYS.map((d, i) => `<label><input type="checkbox" class="sd" value="${i}" checked>${d}</label>`).join("")}</div>
         <div class="row"><div><label>Guard (optional)</label><select id="sg"><option value="">Any guard on duty</option>${guards.filter((g) => g.active).map((g) => `<option value="${g.id}">${esc(g.code)} · ${esc(g.name)}</option>`).join("")}</select></div>
           <button class="btn" onclick="addScheds()">Add</button></div>
-        <p class="help" style="margin-top:8px">Tip: for a single round set From = To.</p></div></div>` : `<div class="empty">Create your first route above.</div>`}`;
+        <p class="help" style="margin-top:8px">Tip: for a single round set From = To.</p></div></div>` : `<div class="empty">${inactive.length ? "No active routes. Create one above or activate one below." : "Create your first route above."}</div>`}
+    ${inactive.length ? `<div class="card" style="background:#f8fafc"><h3>🗄️ Deactivated routes (${inactive.length})</h3>
+      <p class="help">These make no new rounds and do not appear in future days. Their past rounds stay in Reports.</p>
+      <table><tr><th>Route</th><th>Started</th><th>End date</th><th></th></tr>
+      ${inactive.map((r) => `<tr><td><b>${esc(r.name)}</b></td><td>${fmtDate(r.start_date + "T12:00:00+05:30")} ${hm(r.start_time)}</td>
+        <td>${r.end_date ? fmtDate(r.end_date + "T12:00:00+05:30") : "–"}</td>
+        <td class="r"><button class="btn s xs" onclick="toggleRoute('${r.id}', true)">Activate again</button></td></tr>`).join("")}</table></div>` : ""}`;
   const rs = document.getElementById("rsel"); if (rs) rs.onchange = (e) => VIEWS.routes(m, e.target.value);
   window._rcs = rcs.map((r) => ({ checkpoint_id: r.checkpoint_id, media: r.media || "auto" })); window._route = sel?.id;
 };
@@ -432,18 +444,34 @@ async function addRoute() {
   if (!rnew.value.trim()) return toast("Enter a route name", "err");
   if (!rstart.value) return toast("Choose a start date", "err");
   if (rend.value && rend.value < rstart.value) return toast("End date is before start date", "err");
-  const [r] = await q(sb.from("routes").insert({ name: rnew.value.trim(), start_date: rstart.value, end_date: rend.value || null, media_mode: rmedia.value }).select());
+  if (!rstartt.value) return toast("Choose a start time", "err");
+  const dup = cache.routes.find((r) => r.active && r.name.trim().toLowerCase() === rnew.value.trim().toLowerCase() && r.start_date === rstart.value && hm(r.start_time) === rstartt.value);
+  if (dup) return toast("A route with the same name, start date and start time already exists.", "err");
+  const [r] = await q(sb.from("routes").insert({ name: rnew.value.trim(), start_date: rstart.value, start_time: rstartt.value, end_date: rend.value || null, media_mode: rmedia.value }).select());
   document.getElementById("main").dataset.sel = r.id; toast("Route created"); go("routes");
 }
 async function saveRoute(id) {
-  const $ = (x) => document.getElementById(x), name = $("rn").value.trim(), sd = $("rs").value, ed = $("re").value;
+  const $ = (x) => document.getElementById(x), name = $("rn").value.trim(), sd = $("rs").value, ed = $("re").value, stt = $("rst").value || "00:00";
   if (!name || !sd) return toast("Name and start date are required", "err");
+  const dup = cache.routes.find((r) => r.id !== id && r.active && r.name.trim().toLowerCase() === name.toLowerCase() && r.start_date === sd && hm(r.start_time) === stt);
+  if (dup) return toast("A route with the same name, start date and start time already exists.", "err");
   if (ed && ed < sd) return toast("End date is before start date", "err");
-  await q(sb.from("routes").update({ name, start_date: sd, end_date: ed || null, media_mode: $("rm").value,
+  await q(sb.from("routes").update({ name, start_date: sd, start_time: stt, end_date: ed || null, media_mode: $("rm").value,
     name_hi: val("rt_hi"), name_gu: val("rt_gu") }).eq("id", id));
   toast("Route saved"); VIEWS.routes(document.getElementById("main"), id);
 }
-async function toggleRoute(id, active) { await q(sb.from("routes").update({ active }).eq("id", id)); go("routes"); }
+async function toggleRoute(id, active) {
+  const r = cache.routes.find((x) => x.id === id);
+  if (!active && !confirm(`Deactivate "${r.name}"?\n\nIts upcoming rounds are removed and it will not appear on future days. Past rounds stay in Reports. You can activate it again later.`)) return;
+  if (active) {
+    const dup = cache.routes.find((x) => x.id !== id && x.active && x.name.trim().toLowerCase() === r.name.trim().toLowerCase() && x.start_date === r.start_date && hm(x.start_time) === hm(r.start_time));
+    if (dup) return toast("An active route with the same name, start date and start time already exists. Change its start time first.", "err");
+  }
+  await q(sb.from("routes").update({ active }).eq("id", id));
+  toast(active ? "Route activated" : "Route deactivated");
+  if (active) document.getElementById("main").dataset.sel = id;
+  go("routes");
+}
 async function setCpMedia(cpId, media) {
   await q(sb.from("route_checkpoints").update({ media }).eq("route_id", window._route).eq("checkpoint_id", cpId));
   const x = window._rcs.find((r) => r.checkpoint_id === cpId); if (x) x.media = media;
