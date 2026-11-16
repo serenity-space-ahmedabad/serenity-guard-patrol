@@ -12,6 +12,21 @@ Checks that guards actually walk their rounds and that they don't skip any.
   - see reports and download them as CSV
 - **Server time only.** The server stamps every scan with its own clock (`now()`). The phone's clock is never used, so changing the time on the phone has no effect.
 
+## Live deployment (16-Nov-2026)
+
+| Item | Where |
+|---|---|
+| Committee dashboard | https://serenity-space-ahmedabad.github.io/serenity-guard-patrol/admin.html |
+| Guard app | https://serenity-space-ahmedabad.github.io/serenity-guard-patrol/ |
+| Code | github.com/serenity-space-ahmedabad/serenity-guard-patrol (society GitHub organization) |
+| Database | Supabase project `serenity-guard-patrol` (Mumbai), in the society's own Supabase account, organization "Serenity Space" (Free plan) |
+| Super admin | Chairman (Biren Shah) |
+
+- The Chairman's personal Supabase login is only a **Developer** in the society organization, so it doesn't use up the society's free project slots.
+- To let Claude change the database, connect Claude's Supabase connector using the **society** Supabase login. Only one Supabase account can be connected at a time.
+- Database changes are applied by Claude through that connection. The GitHub "Deploy Supabase" workflow is manual-only.
+- The website republishes automatically whenever anything in `web/` changes.
+
 ## How copying the QR is stopped
 
 The weak point of QR patrolling is that a guard can photograph the QR once and later scan that photo from the guard room. Seven checks work together against this:
