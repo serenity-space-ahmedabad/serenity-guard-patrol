@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Serenity Space · Patrol Admin</title>
 <link rel="icon" href="icon.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
 <style>
   :root { --bg:#f8fafc; --card:#fff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b; --brand:#0369a1;
           --green:#15803d; --gbg:#dcfce7; --amber:#b45309; --abg:#fef3c7; --red:#b91c1c; --rbg:#fee2e2; --sbg:#f1f5f9; }
@@ -20,6 +22,9 @@
   main { padding:18px 20px 60px; max-width:1200px; margin:0 auto; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
   .card h3 { margin:0 0 12px; font-size:15px; }
+  .card { overflow-x:auto; }
+  @media (max-width:700px) { main { padding:12px 10px 50px; } header { padding:10px 12px; } header .muted { display:none; }
+    th, td { padding:7px 6px; font-size:13px; } .modal .box { padding:14px; } }
   .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:16px; }
   .kpi { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
   .kpi .v { font-size:26px; font-weight:700; } .kpi .l { color:var(--muted); font-size:12px; }
@@ -83,9 +88,9 @@ const chip = (s) => `<span class="chip ${s}">${STATUS_TEXT[s] || s}</span>`;
 async function boot() {
   if (!sb) { root.innerHTML = `<div class="empty">Setup pending: Supabase keys are not configured in config.js.</div>`; return; }
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) return renderLogin();
+  if (!session) return location.replace("index.html#committee");
   const ok = await sb.rpc("is_admin");
-  if (!ok.data) { root.innerHTML = `<div class="login card"><h3>Not an admin</h3><p class="muted">This login does not have committee access.</p><button class="btn s" onclick="logout()">Log out</button></div>`; return; }
+  if (!ok.data) return location.replace("index.html");
   me = session.user;
   const t = await sb.rpc("server_now"); if (t.data) SSP.syncServer(t.data);
   shell();
@@ -101,7 +106,7 @@ function renderLogin(msg) {
     if (error) return renderLogin(error.message); boot();
   };
 }
-async function logout() { await sb.auth.signOut(); location.reload(); }
+async function logout() { await sb.auth.signOut(); location.replace("index.html#committee"); }
 
 // ---------------- Shell ----------------
 const TABS = [["today","Today"],["review","Review"],["checkpoints","Checkpoints & QR"],["routes","Routes & times"],["guards","Guards"],["reports","Reports"],["settings","Settings"]];
@@ -284,25 +289,39 @@ function editCp(id) {
 function setLoc(id) {
   const c = cache.cps.find((x) => x.id === id);
   if (!navigator.geolocation) return toast("This device has no GPS", "err");
-  const el = modal(`<h2>📍 ${esc(c.name)}</h2><p>Stand right next to where the QR will be fixed. Taking readings…</p><p id="gs" style="font-size:18px"></p>
-    <div class="row" style="justify-content:flex-end"><button class="btn s" onclick="closeModal()">Cancel</button><button class="btn" id="gsave" disabled>Save this location</button></div>`);
-  const reads = []; const t0 = Date.now();
-  const w = navigator.geolocation.watchPosition((p) => {
+  const el = modal(`<h2>📍 ${esc(c.name)}</h2>
+    <p>Stand right next to where the QR will be fixed. Use your <b>mobile phone</b> with Location on — a computer gives only a rough location.</p>
+    <p id="gs" style="font-size:18px">Waiting for GPS…</p><p id="gw" class="help"></p>
+    <div class="row" style="justify-content:flex-end"><button class="btn s" id="gcancel">Cancel</button><button class="btn" id="gsave" disabled>Save this location</button></div>`);
+  const gsEl = el.querySelector("#gs"), gwEl = el.querySelector("#gw"), btn = el.querySelector("#gsave");
+  const reads = []; let fix = null, w = null;
+  const stop = () => { if (w !== null) navigator.geolocation.clearWatch(w); w = null; };
+  const onPos = (p) => {
     reads.push(p.coords);
-    const good = reads.filter((r) => r.accuracy <= Math.max(25, Math.min(...reads.map((x) => x.accuracy)) * 1.5));
-    const wsum = good.reduce((a, r) => a + 1 / r.accuracy, 0);
-    const lat = good.reduce((a, r) => a + r.latitude / r.accuracy, 0) / wsum, lng = good.reduce((a, r) => a + r.longitude / r.accuracy, 0) / wsum;
     const best = Math.min(...reads.map((x) => x.accuracy));
-    gs.innerHTML = `${reads.length} readings · best accuracy ±${Math.round(best)} m<br><span class="muted">${lat.toFixed(6)}, ${lng.toFixed(6)}</span>`;
-    gsave.disabled = reads.length < 3 && Date.now() - t0 < 8000;
-    gsave.onclick = async () => {
-      navigator.geolocation.clearWatch(w);
-      const radius = Math.max(c.radius_m, Math.min(60, Math.round(best * 1.5)));
-      await q(sb.from("checkpoints").update({ lat, lng, radius_m: radius }).eq("id", id));
-      closeModal(); toast(`Location saved (radius ${radius} m)`); go("checkpoints");
-    };
-  }, (e) => (gs.textContent = "GPS error: " + e.message), { enableHighAccuracy:true, maximumAge:0, timeout:30000 });
-  el.addEventListener("click", (e) => { if (e.target === el) navigator.geolocation.clearWatch(w); });
+    const good = reads.filter((r) => r.accuracy <= Math.max(25, best * 1.5));
+    const wsum = good.reduce((a, r) => a + 1 / r.accuracy, 0);
+    fix = { lat: good.reduce((a, r) => a + r.latitude / r.accuracy, 0) / wsum,
+            lng: good.reduce((a, r) => a + r.longitude / r.accuracy, 0) / wsum, best };
+    gsEl.innerHTML = `${reads.length} reading(s) · accuracy ±${Math.round(best)} m<br><span class="muted">${fix.lat.toFixed(6)}, ${fix.lng.toFixed(6)}</span>`;
+    gwEl.innerHTML = best > 50 ? "⚠️ GPS is weak (more than 50 m). Wait a few seconds or step into the open for a better reading. You can still save."
+                   : best > 20 ? "Getting better… waiting a few seconds improves accuracy." : "✅ Good accuracy.";
+    btn.disabled = false;
+  };
+  const onErr = (e) => { if (!fix) gsEl.textContent = "GPS error: " + e.message + (e.code === 1 ? " — allow Location for this site." : ""); };
+  navigator.geolocation.getCurrentPosition(onPos, onErr, { enableHighAccuracy:true, maximumAge:0, timeout:20000 });
+  w = navigator.geolocation.watchPosition(onPos, onErr, { enableHighAccuracy:true, maximumAge:0, timeout:30000 });
+  el.querySelector("#gcancel").onclick = () => { stop(); closeModal(); };
+  el.addEventListener("click", (e) => { if (e.target === el) stop(); });
+  btn.onclick = async () => {
+    if (!fix) return;
+    btn.disabled = true; btn.textContent = "Saving…";
+    stop();
+    const radius = Math.max(c.radius_m, Math.min(60, Math.round(fix.best * 1.5)));
+    const { data, error } = await sb.from("checkpoints").update({ lat: fix.lat, lng: fix.lng, radius_m: radius }).eq("id", id).select("id");
+    if (error || !data?.length) { btn.disabled = false; btn.textContent = "Save this location"; return toast(error?.message || "Could not save — please log in again", "err"); }
+    closeModal(); toast(`Location saved (check radius ${radius} m)`); go("checkpoints");
+  };
 }
 async function rekey(id) {
   const c = cache.cps.find((x) => x.id === id);

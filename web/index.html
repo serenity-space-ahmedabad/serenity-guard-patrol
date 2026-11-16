@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0f172a">
-<title>Serenity Space · Guard Patrol</title>
+<title>Serenity Space · Patrol</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg">
 <style>
@@ -44,6 +44,9 @@
   .btn.ghost { background:none; border:1px solid var(--line); color:var(--text); font-weight:600; font-size:16px; padding:12px; }
   input { width:100%; padding:14px; font-size:20px; border-radius:12px; border:1px solid var(--line); background:#0b1220; color:var(--text); margin:6px 0 12px; letter-spacing:2px; }
   label { color:var(--muted); font-size:14px; }
+  .seg { display:flex; background:var(--card); border-radius:12px; padding:4px; margin-bottom:12px; }
+  .seg button { flex:1; border:0; background:none; color:var(--muted); padding:10px; border-radius:9px; font-size:15px; font-weight:600; }
+  .seg button.on { background:var(--blue); color:#082f49; }
   .empty { color:var(--muted); text-align:center; padding:30px 10px; }
   .foot { text-align:center; color:var(--muted); font-size:12px; margin-top:20px; }
   .link { background:none; border:0; color:var(--muted); text-decoration:underline; font-size:14px; }
@@ -87,7 +90,7 @@
 <script src="common.js"></script>
 <script>
 const T = {
-  en: { sub:"Guard Patrol", code:"Guard code", pin:"6-digit PIN", login:"Log in", logout:"Log out",
+  en: { guardTab:"Guard", committeeTab:"Committee", email:"Email", password:"Password", sub:"Guard Patrol", code:"Guard code", pin:"6-digit PIN", login:"Log in", logout:"Log out",
         server:"Server time (India)", phoneWarn:"This phone is not registered for you. Your scans will be marked for checking. Ask the committee to reset your phone.",
         none:"No rounds right now.", open:"Round open", soon:"Starts", done:"Completed", until:"Finish by",
         scan:"Scan next checkpoint", allDone:"All checkpoints done ✓", point:"Point the camera at the checkpoint QR",
@@ -96,7 +99,7 @@ const T = {
         back:"Back", cancel:"Cancel", left:"left", gpsOff:"GPS is off — please turn on Location",
         camErr:"Camera not available. Allow camera permission for this site.", notOurs:"This is not a patrol QR",
         video:"VIDEO", photoM:"PHOTO", wrongLogin:"Wrong guard code or PIN", progress:"done" },
-  hi: { sub:"गार्ड पेट्रोल", code:"गार्ड कोड", pin:"6 अंकों का पिन", login:"लॉग इन", logout:"लॉग आउट",
+  hi: { guardTab:"गार्ड", committeeTab:"कमेटी", email:"ईमेल", password:"पासवर्ड", sub:"गार्ड पेट्रोल", code:"गार्ड कोड", pin:"6 अंकों का पिन", login:"लॉग इन", logout:"लॉग आउट",
         server:"सर्वर समय (भारत)", phoneWarn:"यह फोन आपके नाम पर रजिस्टर नहीं है। आपके स्कैन जाँच के लिए चिह्नित होंगे। कमेटी से फोन रीसेट करवाएँ।",
         none:"अभी कोई राउंड नहीं है।", open:"राउंड चालू", soon:"शुरू", done:"पूरा", until:"पूरा करें",
         scan:"अगला चेकपॉइंट स्कैन करें", allDone:"सभी चेकपॉइंट पूरे ✓", point:"कैमरा चेकपॉइंट के QR पर रखें",
@@ -105,7 +108,7 @@ const T = {
         back:"वापस", cancel:"रद्द करें", left:"बाकी", gpsOff:"GPS बंद है — लोकेशन चालू करें",
         camErr:"कैमरा उपलब्ध नहीं। इस साइट को कैमरा की अनुमति दें।", notOurs:"यह पेट्रोल QR नहीं है",
         video:"वीडियो", photoM:"फोटो", wrongLogin:"गलत गार्ड कोड या पिन", progress:"पूरे" },
-  gu: { sub:"ગાર્ડ પેટ્રોલ", code:"ગાર્ડ કોડ", pin:"6 અંકનો પિન", login:"લૉગ ઇન", logout:"લૉગ આઉટ",
+  gu: { guardTab:"ગાર્ડ", committeeTab:"કમિટી", email:"ઈમેલ", password:"પાસવર્ડ", sub:"ગાર્ડ પેટ્રોલ", code:"ગાર્ડ કોડ", pin:"6 અંકનો પિન", login:"લૉગ ઇન", logout:"લૉગ આઉટ",
         server:"સર્વર સમય (ભારત)", phoneWarn:"આ ફોન તમારા નામે રજિસ્ટર નથી. તમારા સ્કેન તપાસ માટે ચિહ્નિત થશે. કમિટી પાસે ફોન રીસેટ કરાવો.",
         none:"અત્યારે કોઈ રાઉન્ડ નથી.", open:"રાઉન્ડ ચાલુ", soon:"શરૂ", done:"પૂર્ણ", until:"પૂરું કરો",
         scan:"આગળનો ચેકપોઇન્ટ સ્કેન કરો", allDone:"બધા ચેકપોઇન્ટ પૂર્ણ ✓", point:"કેમેરા ચેકપોઇન્ટના QR પર રાખો",
@@ -144,21 +147,28 @@ function langBar() {
 }
 function setLang(k) { lang = k; localStorage.setItem("ssp_lang", k); home ? renderHome() : renderLogin(); }
 
+let loginMode = location.hash === "#committee" ? "committee" : "guard";
 function renderLogin(msg) {
+  const g = loginMode === "guard";
   app.innerHTML = `
     <header><div class="brand">Serenity Space<small>${t("sub")}</small></div>${langBar()}</header>
+    <div class="seg"><button class="${g ? "on" : ""}" onclick="loginMode='guard';renderLogin()">🛡️ ${t("guardTab")}</button>
+      <button class="${g ? "" : "on"}" onclick="loginMode='committee';renderLogin()">🏢 ${t("committeeTab")}</button></div>
     <div class="card">
-      <label>${t("code")}</label><input id="code" autocapitalize="characters" autocomplete="username" placeholder="G01">
-      <label>${t("pin")}</label><input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="••••••">
+      ${g ? `<label>${t("code")}</label><input id="code" autocapitalize="characters" autocomplete="username" placeholder="G01">
+             <label>${t("pin")}</label><input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="••••••">`
+          : `<label>${t("email")}</label><input id="code" type="email" autocomplete="username" style="letter-spacing:0;font-size:17px">
+             <label>${t("password")}</label><input id="pin" type="password" autocomplete="current-password" style="letter-spacing:0;font-size:17px">`}
       <button class="btn" id="go">${t("login")}</button>
       ${msg ? `<p style="color:#fca5a5;text-align:center">${esc(msg)}</p>` : ""}
     </div>
     <div class="foot">Serenity Space Co-operative Housing Society</div>`;
   document.getElementById("go").onclick = async () => {
-    const code = document.getElementById("code").value.trim(), pin = document.getElementById("pin").value.trim();
-    if (!code || !pin) return;
-    const { error } = await sb.auth.signInWithPassword({ email: SSP.guardEmail(code), password: pin });
-    if (error) return renderLogin(t("wrongLogin"));
+    const id = document.getElementById("code").value.trim(), pw = document.getElementById("pin").value;
+    if (!id || !pw) return;
+    const email = g ? SSP.guardEmail(id) : id;
+    const { error } = await sb.auth.signInWithPassword({ email, password: g ? pw.trim() : pw });
+    if (error) return renderLogin(g ? t("wrongLogin") : error.message);
     boot();
   };
 }
@@ -349,6 +359,8 @@ async function boot() {
   if (!sb) { app.innerHTML = `<div class="empty">Setup pending: Supabase keys are not configured in config.js.</div>`; return; }
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return renderLogin();
+  const adm = await sb.rpc("is_admin");
+  if (adm.data === true) return location.replace("admin.html");
   startGps();
   await loadHome();
   clearInterval(clockTimer); clockTimer = setInterval(() => {
