@@ -84,3 +84,14 @@ Marked **Check** (counted, but the committee should look): GPS too far away, GPS
 - **Free plan pause:** Supabase pauses a free project after 7 days without any use. Guards scanning every night keeps it awake.
 - **Changing rules:** the Settings tab has the video %, time limits, walking speed, GPS accuracy and how long media is kept.
 - **Database changes:** add a *new* file under `supabase/migrations/`. Never edit a migration that has already been applied.
+
+## Guard app features (16-Nov-2026)
+
+- **One link for all:** guards pick their name from a list + PIN; committee members use the Committee tab.
+- **Big "go to" tile:** picture, place name, one green camera button, and dots showing progress through the route.
+- **Voice:** the app speaks every step in Hindi / Gujarati / English. If the phone has no Gujarati voice, it speaks Hindi. 🔊 turns it on or off.
+- **QR not working:** the guard chooses the place, taps a picture reason (torn, dirty, dark, camera, other), can speak or type a note, then records a 10-second video. These check-ins always go to the committee's Review tab.
+- **Alerts:** after the guard taps "Turn on alerts", the phone rings when a round starts and again 15 minutes before it closes if places are left. On iPhone, the app must first be added to the Home Screen.
+- **Routes:** each route has a start date and time, and an optional end date. Two active routes cannot have the same name, start date and start time. Deactivated routes are listed separately and can be activated again.
+- **Hindi / Gujarati names:** names are translated automatically or written in Hindi/Gujarati letters. Committee members can correct them under Edit or Route settings.
+- **Tap feedback:** a tapped button dims and shows a spinner, and a coloured bar runs at the top while the server is working.
