@@ -44,6 +44,7 @@
   .btn.ghost { background:none; border:1px solid var(--line); color:var(--text); font-weight:600; font-size:16px; padding:12px; }
   input { width:100%; padding:14px; font-size:20px; border-radius:12px; border:1px solid var(--line); background:#0b1220; color:var(--text); margin:6px 0 12px; letter-spacing:2px; }
   label { color:var(--muted); font-size:14px; }
+  select.sel { width:100%; padding:14px; font-size:18px; border-radius:12px; border:1px solid var(--line); background:#0b1220; color:var(--text); margin:6px 0 12px; }
   .seg { display:flex; background:var(--card); border-radius:12px; padding:4px; margin-bottom:12px; }
   .seg button { flex:1; border:0; background:none; color:var(--muted); padding:10px; border-radius:9px; font-size:15px; font-weight:600; }
   .seg button.on { background:var(--blue); color:#082f49; }
@@ -88,9 +89,10 @@
 <script src="vendor/jsQR.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
+<script src="i18n.js"></script>
 <script>
 const T = {
-  en: { guardTab:"Guard", committeeTab:"Committee", email:"Email", password:"Password", sub:"Guard Patrol", code:"Guard code", pin:"6-digit PIN", login:"Log in", logout:"Log out",
+  en: { pickGuard:"Select your name", fl_OLD_QR:"This QR is no longer valid. The committee has been informed.", fl_UNKNOWN_QR:"This is not a Serenity Space patrol QR.", fl_NOT_ON_ROUTE:"This place is not part of this round.", fl_DUPLICATE:"This place is already done for this round.", fl_NO_MEDIA:"Photo/video did not upload. Please scan again.", fl_EXPIRED:"Took too long. Please scan again.", fl_OUT_OF_ZONE:"You seem to be away from this place (GPS)", fl_NO_GPS:"GPS was off", fl_TOO_FAST:"Too quick after the previous place", fl_OTHER_PHONE:"A different phone was used", fl_LATE:"After the round time", fl_LOW_GPS:"Weak GPS", fl_OUT_OF_ORDER:"Not in route order", needVideo:"This place needs a VIDEO", guardTab:"Guard", committeeTab:"Committee", email:"Email", password:"Password", sub:"Guard Patrol", code:"Guard code", pin:"6-digit PIN", login:"Log in", logout:"Log out",
         server:"Server time (India)", phoneWarn:"This phone is not registered for you. Your scans will be marked for checking. Ask the committee to reset your phone.",
         none:"No rounds right now.", open:"Round open", soon:"Starts", done:"Completed", until:"Finish by",
         scan:"Scan next checkpoint", allDone:"All checkpoints done ✓", point:"Point the camera at the checkpoint QR",
@@ -99,7 +101,7 @@ const T = {
         back:"Back", cancel:"Cancel", left:"left", gpsOff:"GPS is off — please turn on Location",
         camErr:"Camera not available. Allow camera permission for this site.", notOurs:"This is not a patrol QR",
         video:"VIDEO", photoM:"PHOTO", wrongLogin:"Wrong guard code or PIN", progress:"done" },
-  hi: { guardTab:"गार्ड", committeeTab:"कमेटी", email:"ईमेल", password:"पासवर्ड", sub:"गार्ड पेट्रोल", code:"गार्ड कोड", pin:"6 अंकों का पिन", login:"लॉग इन", logout:"लॉग आउट",
+  hi: { pickGuard:"अपना नाम चुनें", fl_OLD_QR:"यह QR अब मान्य नहीं है। कमेटी को सूचित कर दिया गया है।", fl_UNKNOWN_QR:"यह सेरेनिटी स्पेस का पेट्रोल QR नहीं है।", fl_NOT_ON_ROUTE:"यह जगह इस राउंड में शामिल नहीं है।", fl_DUPLICATE:"यह जगह इस राउंड में पहले ही हो चुकी है।", fl_NO_MEDIA:"फोटो/वीडियो अपलोड नहीं हुआ। फिर से स्कैन करें।", fl_EXPIRED:"बहुत देर हो गई। फिर से स्कैन करें।", fl_OUT_OF_ZONE:"आप इस जगह से दूर लगते हैं (GPS)", fl_NO_GPS:"GPS बंद था", fl_TOO_FAST:"पिछली जगह के बाद बहुत जल्दी", fl_OTHER_PHONE:"दूसरे फोन का उपयोग हुआ", fl_LATE:"राउंड के समय के बाद", fl_LOW_GPS:"कमज़ोर GPS", fl_OUT_OF_ORDER:"रूट के क्रम में नहीं", needVideo:"इस जगह के लिए वीडियो ज़रूरी है", guardTab:"गार्ड", committeeTab:"कमेटी", email:"ईमेल", password:"पासवर्ड", sub:"गार्ड पेट्रोल", code:"गार्ड कोड", pin:"6 अंकों का पिन", login:"लॉग इन", logout:"लॉग आउट",
         server:"सर्वर समय (भारत)", phoneWarn:"यह फोन आपके नाम पर रजिस्टर नहीं है। आपके स्कैन जाँच के लिए चिह्नित होंगे। कमेटी से फोन रीसेट करवाएँ।",
         none:"अभी कोई राउंड नहीं है।", open:"राउंड चालू", soon:"शुरू", done:"पूरा", until:"पूरा करें",
         scan:"अगला चेकपॉइंट स्कैन करें", allDone:"सभी चेकपॉइंट पूरे ✓", point:"कैमरा चेकपॉइंट के QR पर रखें",
@@ -108,7 +110,7 @@ const T = {
         back:"वापस", cancel:"रद्द करें", left:"बाकी", gpsOff:"GPS बंद है — लोकेशन चालू करें",
         camErr:"कैमरा उपलब्ध नहीं। इस साइट को कैमरा की अनुमति दें।", notOurs:"यह पेट्रोल QR नहीं है",
         video:"वीडियो", photoM:"फोटो", wrongLogin:"गलत गार्ड कोड या पिन", progress:"पूरे" },
-  gu: { guardTab:"ગાર્ડ", committeeTab:"કમિટી", email:"ઈમેલ", password:"પાસવર્ડ", sub:"ગાર્ડ પેટ્રોલ", code:"ગાર્ડ કોડ", pin:"6 અંકનો પિન", login:"લૉગ ઇન", logout:"લૉગ આઉટ",
+  gu: { pickGuard:"તમારું નામ પસંદ કરો", fl_OLD_QR:"આ QR હવે માન્ય નથી. કમિટીને જાણ કરવામાં આવી છે.", fl_UNKNOWN_QR:"આ સેરેનિટી સ્પેસનો પેટ્રોલ QR નથી.", fl_NOT_ON_ROUTE:"આ જગ્યા આ રાઉન્ડમાં સામેલ નથી.", fl_DUPLICATE:"આ જગ્યા આ રાઉન્ડમાં પહેલેથી થઈ ગઈ છે.", fl_NO_MEDIA:"ફોટો/વીડિયો અપલોડ થયો નથી. ફરી સ્કેન કરો.", fl_EXPIRED:"ખૂબ મોડું થયું. ફરી સ્કેન કરો.", fl_OUT_OF_ZONE:"તમે આ જગ્યાથી દૂર લાગો છો (GPS)", fl_NO_GPS:"GPS બંધ હતું", fl_TOO_FAST:"પાછલી જગ્યા પછી ખૂબ જલ્દી", fl_OTHER_PHONE:"બીજા ફોનનો ઉપયોગ થયો", fl_LATE:"રાઉન્ડના સમય પછી", fl_LOW_GPS:"નબળું GPS", fl_OUT_OF_ORDER:"રૂટના ક્રમમાં નથી", needVideo:"આ જગ્યા માટે વીડિયો જરૂરી છે", guardTab:"ગાર્ડ", committeeTab:"કમિટી", email:"ઈમેલ", password:"પાસવર્ડ", sub:"ગાર્ડ પેટ્રોલ", code:"ગાર્ડ કોડ", pin:"6 અંકનો પિન", login:"લૉગ ઇન", logout:"લૉગ આઉટ",
         server:"સર્વર સમય (ભારત)", phoneWarn:"આ ફોન તમારા નામે રજિસ્ટર નથી. તમારા સ્કેન તપાસ માટે ચિહ્નિત થશે. કમિટી પાસે ફોન રીસેટ કરાવો.",
         none:"અત્યારે કોઈ રાઉન્ડ નથી.", open:"રાઉન્ડ ચાલુ", soon:"શરૂ", done:"પૂર્ણ", until:"પૂરું કરો",
         scan:"આગળનો ચેકપોઇન્ટ સ્કેન કરો", allDone:"બધા ચેકપોઇન્ટ પૂર્ણ ✓", point:"કેમેરા ચેકપોઇન્ટના QR પર રાખો",
@@ -122,6 +124,9 @@ let lang = localStorage.getItem("ssp_lang") || "en";
 const t = (k) => (T[lang] && T[lang][k]) || T.en[k];
 const { sb, esc, fmtDate, fmtTime, fmtDateTime, toast } = SSP;
 const app = document.getElementById("app");
+const L = (obj, f) => SSP_I18N.pick(obj, f, lang);
+const LN = (txt) => SSP_I18N.localize(txt, lang);
+const flagText = (f) => (T[lang] && T[lang]["fl_" + f]) || T.en["fl_" + f] || f;
 
 // A random id stored on this phone; the server locks each guard to one phone
 let deviceId = localStorage.getItem("ssp_device_id");
@@ -148,14 +153,24 @@ function langBar() {
 function setLang(k) { lang = k; localStorage.setItem("ssp_lang", k); home ? renderHome() : renderLogin(); }
 
 let loginMode = location.hash === "#committee" ? "committee" : "guard";
+let guardList = null;
+async function loadGuardList() {
+  try { const { data, error } = await sb.rpc("guard_login_list"); guardList = error ? [] : (data || []); } catch (e) { guardList = []; }
+}
 function renderLogin(msg) {
   const g = loginMode === "guard";
+  if (g && guardList === null) { loadGuardList().then(() => renderLogin(msg)); }
+  const last = localStorage.getItem("ssp_last_guard") || "";
+  const guardField = guardList && guardList.length
+    ? `<select id="code" class="sel"><option value="">— ${t("pickGuard")} —</option>${guardList.map((x) =>
+        `<option value="${esc(x.code)}" ${x.code === last ? "selected" : ""}>${esc(x.code)} · ${esc(LN(x.name))}</option>`).join("")}</select>`
+    : `<input id="code" autocapitalize="characters" autocomplete="username" placeholder="G01" value="${esc(last)}">`;
   app.innerHTML = `
     <header><div class="brand">Serenity Space<small>${t("sub")}</small></div>${langBar()}</header>
-    <div class="seg"><button class="${g ? "on" : ""}" onclick="loginMode='guard';renderLogin()">🛡️ ${t("guardTab")}</button>
+    <div class="seg"><button class="${g ? "on" : ""}" onclick="loginMode='guard';history.replaceState(null,'',location.pathname);renderLogin()">🛡️ ${t("guardTab")}</button>
       <button class="${g ? "" : "on"}" onclick="loginMode='committee';renderLogin()">🏢 ${t("committeeTab")}</button></div>
     <div class="card">
-      ${g ? `<label>${t("code")}</label><input id="code" autocapitalize="characters" autocomplete="username" placeholder="G01">
+      ${g ? `<label>${t("pickGuard")}</label>${guardField}
              <label>${t("pin")}</label><input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="••••••">`
           : `<label>${t("email")}</label><input id="code" type="email" autocomplete="username" style="letter-spacing:0;font-size:17px">
              <label>${t("password")}</label><input id="pin" type="password" autocomplete="current-password" style="letter-spacing:0;font-size:17px">`}
@@ -169,6 +184,7 @@ function renderLogin(msg) {
     const email = g ? SSP.guardEmail(id) : id;
     const { error } = await sb.auth.signInWithPassword({ email, password: g ? pw.trim() : pw });
     if (error) return renderLogin(g ? t("wrongLogin") : error.message);
+    if (g) localStorage.setItem("ssp_last_guard", id);
     boot();
   };
 }
@@ -189,18 +205,18 @@ function renderHome() {
       : r.open_now ? `<span class="chip open">${t("open")}</span>`
       : `<span class="chip soon">${t("soon")} ${fmtTime(r.due_start)}</span>`;
     return `<div class="card ${r.open_now && !complete ? "open" : ""}">
-      <div class="row"><div><div class="route">${esc(r.route_name)}</div>
+      <div class="row"><div><div class="route">${esc(lang === "en" ? r.route_name : (r["route_name_" + lang] || LN(r.route_name)))}</div>
         <div class="win">${fmtTime(r.due_start)} – ${fmtTime(r.due_end)} · ${t("until")} ${fmtTime(r.due_end)}</div></div>${chip}</div>
       <div class="bar"><i style="width:${total ? (100*done/total) : 0}%"></i></div>
       <div class="win">${done} / ${total} ${t("progress")}</div>
       <ol>${(r.checkpoints || []).map((c) => `<li class="${c.done ? "ok" : ""}"><span class="n">${c.done ? "✓" : c.seq}</span>
-        <span>${esc(c.name)}${c.area ? `<br><span class="a">${esc(c.area)}</span>` : ""}</span></li>`).join("")}</ol>
+        <span>${esc(L(c, "name"))}${c.media === "video" ? " 🎥" : ""}${c.area ? `<br><span class="a">${esc(L(c, "area"))}</span>` : ""}</span></li>`).join("")}</ol>
       ${r.open_now && !complete ? `<button class="btn" onclick="startScan('${r.id}')">📷 ${t("scan")}</button>`
         : complete ? `<p style="color:var(--green);text-align:center;font-weight:700">${t("allDone")}</p>` : ""}
     </div>`;
   }).join("");
   app.innerHTML = `
-    <header><div class="brand">${esc(home.guard.name)} · ${esc(home.guard.code)}<small>Serenity Space · ${t("sub")}</small></div>${langBar()}</header>
+    <header><div class="brand">${esc(LN(home.guard.name))} · ${esc(home.guard.code)}<small>Serenity Space · ${t("sub")}</small></div>${langBar()}</header>
     <div class="clock"><div class="t" id="clk">${fmtTime(now, true)}</div><div class="d" id="clkd">${t("server")} · ${fmtDate(now)}</div></div>
     ${home.device_ok ? "" : `<div class="warn">⚠️ ${t("phoneWarn")}</div>`}
     ${gpsDenied ? `<div class="warn">📍 ${t("gpsOff")}</div>` : ""}
@@ -281,7 +297,16 @@ async function detectLoop() {
       else {
         if (S.phase === "rec" && val === S.qr) S.qrFrames++;
         if (S.phase === "seek") {
-          S.qr = val; S.qrFrames = 1; navigator.vibrate?.(80);
+          S.qr = val; S.qrFrames = 1; navigator.vibrate?.(80); S.phase = "identify";
+          try {
+            const { data: idr } = await sb.rpc("identify_qr", { p_challenge_id: S.ch.challenge_id, p_qr: val });
+            if (idr && idr.media_type && idr.media_type !== S.ch.media_type) {
+              S.ch.media_type = idr.media_type;
+              document.getElementById("mode").textContent = S.ch.media_type === "video" ? `🎥 ${t("video")} ${S.ch.video_seconds}s` : `📸 ${t("photoM")}`;
+              if (S.ch.media_type === "video") toast(t("needVideo"));
+            }
+          } catch (e) {}
+          if (!S || S.stopped) return;
           if (S.ch.media_type === "video") startRecording(); else { S.phase = "photo"; setTimeout(takePhoto, 350); }
         }
       }
@@ -339,9 +364,12 @@ async function finish(blob, ext, type) {
   if (error) return showResult("❌", t("bad"), error.message, "bad");
   SSP.syncServer(data.server_time);
   navigator.vibrate?.(data.status === "rejected" ? [200, 100, 200] : 150);
-  if (data.status === "ok") showResult("✅", t("ok"), `${data.checkpoint} · ${fmtTime(data.server_time, true)} · ${data.done}/${data.total}`, "ok");
-  else if (data.status === "review") showResult("🟡", t("review"), `${data.checkpoint} · ${fmtTime(data.server_time, true)}<br>${data.flags.map((f) => SSP.FLAG_TEXT[f] || f).join(", ")}`, "review");
-  else showResult("❌", t("bad"), esc(data.message), "bad");
+  const cpObj = (st.round.checkpoints || []).find((c) => c.name === data.checkpoint);
+  const cpName = esc(cpObj ? L(cpObj, "name") : LN(data.checkpoint || ""));
+  const hard = ["OLD_QR","UNKNOWN_QR","NOT_ON_ROUTE","DUPLICATE","NO_MEDIA","EXPIRED"];
+  if (data.status === "ok") showResult("✅", t("ok"), `${cpName} · ${fmtTime(data.server_time, true)} · ${data.done}/${data.total}`, "ok");
+  else if (data.status === "review") showResult("🟡", t("review"), `${cpName} · ${fmtTime(data.server_time, true)}<br>${data.flags.filter((f) => f !== "OUT_OF_ORDER").map(flagText).join(", ")}`, "review");
+  else showResult("❌", t("bad"), esc(flagText(data.flags.find((f) => hard.includes(f)) || "") || data.message), "bad");
   loadHome();
 }
 

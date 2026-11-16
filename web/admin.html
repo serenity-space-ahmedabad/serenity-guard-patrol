@@ -70,6 +70,7 @@
 <script src="vendor/qrcode.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
+<script src="i18n.js"></script>
 <script>
 const { sb, esc, fmtDate, fmtTime, fmtDateTime, toast, FLAG_TEXT, FRAUD_FLAGS } = SSP;
 const root = document.getElementById("root");
@@ -106,7 +107,7 @@ function renderLogin(msg) {
     if (error) return renderLogin(error.message); boot();
   };
 }
-async function logout() { await sb.auth.signOut(); location.replace("index.html#committee"); }
+async function logout() { await sb.auth.signOut(); location.replace("index.html"); }
 
 // ---------------- Shell ----------------
 const TABS = [["today","Today"],["review","Review"],["checkpoints","Checkpoints & QR"],["routes","Routes & times"],["guards","Guards"],["reports","Reports"],["settings","Settings"]];
@@ -247,18 +248,22 @@ VIEWS.review = async (m) => {
 async function quickReview(id) { await q(sb.rpc("admin_review_scan", { p_id: id, p_status: "rejected", p_note: "Seen" })); go("review"); }
 
 // ---------- Checkpoints ----------
+const AUTO = (txt, l) => SSP_I18N.localize(txt || "", l);
+const both = (obj, f) => `${esc(SSP_I18N.pick(obj, f, "hi"))} · ${esc(SSP_I18N.pick(obj, f, "gu"))}`;
 VIEWS.checkpoints = async (m) => {
   const { cps } = await lookups();
   m.innerHTML = `<div class="card"><h3>Add checkpoint</h3>
-    <div class="row"><div><label>Name</label><input id="cn" placeholder="e.g. Main Gate"></div>
-      <div><label>Area / block</label><input id="ca" placeholder="e.g. Entrance"></div>
+    <div class="row"><div><label>Name (English)</label><input id="cn" placeholder="e.g. Main Gate" oninput="cpPreview()"></div>
+      <div><label>Area / block</label><input id="ca" placeholder="e.g. Entrance" oninput="cpPreview()"></div>
       <div><label>GPS radius (m)</label><input id="cr" type="number" value="30" style="width:90px"></div>
-      <button class="btn" onclick="addCp()">Add</button></div></div>
+      <button class="btn" onclick="addCp()">Add</button></div>
+    <p class="help" id="cpprev" style="margin-top:8px">Guards will see the name in Hindi and Gujarati automatically. You can correct it later with <b>Edit</b>.</p></div>
     <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3 style="margin:0">Checkpoints (${cps.length})</h3>
       <button class="btn s" onclick="printQr(cache.cps.filter(c=>c.active).map(c=>c.id))">🖨 Print all QR codes</button></div>
     <p class="help">Stand at each checkpoint with your phone and press <b>📍 Set location here</b> once. Use <b>Replace QR</b> if you suspect a guard has photographed a QR — the old one stops working and any later use of it is flagged as fraud.</p>
     ${cps.length ? `<table><tr><th>Name</th><th>Location</th><th>GPS check</th><th>QR</th><th>Status</th><th></th></tr>
-    ${cps.map((c) => `<tr><td><b>${esc(c.name)}</b><br><span class="muted">${esc(c.area || "")}</span></td>
+    ${cps.map((c) => `<tr><td><b>${esc(c.name)}</b><br><span class="muted">${esc(c.area || "")}</span>
+        <br><span class="muted" style="font-size:12px">${both(c, "name")}</span></td>
       <td>${c.lat != null ? `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}<br><span class="muted">within ${c.radius_m} m</span>` : `<span class="chip missed">Not set</span>`}</td>
       <td>${c.gps_required ? "On" : `<span class="muted">Off (indoor)</span>`}</td><td>v${c.qr_version}</td><td>${c.active ? chip("ok").replace("OK", "Active") : `<span class="chip">Inactive</span>`}</td>
       <td class="r"><button class="btn s xs" onclick="setLoc('${c.id}')">📍 Set location here</button>
@@ -266,22 +271,35 @@ VIEWS.checkpoints = async (m) => {
         <button class="btn s xs" onclick="printQr(['${c.id}'])">🖨 QR</button>
         <button class="btn s xs" onclick="rekey('${c.id}')">Replace QR</button></td></tr>`).join("")}</table>` : `<div class="empty">No checkpoints yet.</div>`}</div>`;
 };
+function cpPreview() {
+  const n = cn.value.trim(), a = ca.value.trim();
+  cpprev.innerHTML = n ? `Hindi: <b>${esc(AUTO(n, "hi"))}</b>${a ? " · " + esc(AUTO(a, "hi")) : ""} &nbsp;|&nbsp; Gujarati: <b>${esc(AUTO(n, "gu"))}</b>${a ? " · " + esc(AUTO(a, "gu")) : ""}`
+                       : "Guards will see the name in Hindi and Gujarati automatically. You can correct it later with <b>Edit</b>.";
+}
 async function addCp() {
   if (!cn.value.trim()) return toast("Enter a name", "err");
   await q(sb.from("checkpoints").insert({ name: cn.value.trim(), area: ca.value.trim() || null, radius_m: +cr.value || 30 }));
   toast("Checkpoint added"); go("checkpoints");
 }
+// Hindi / Gujarati inputs: blank = automatic (shown as grey placeholder)
+const trInputs = (pfx, obj, f, label) => `<div class="row" style="margin-top:8px">
+    <div><label>${label} – हिंदी (blank = automatic)</label><input id="${pfx}_hi" value="${esc(obj?.[f + "_hi"] || "")}" placeholder="${esc(AUTO(obj?.[f], "hi"))}"></div>
+    <div><label>${label} – ગુજરાતી (blank = automatic)</label><input id="${pfx}_gu" value="${esc(obj?.[f + "_gu"] || "")}" placeholder="${esc(AUTO(obj?.[f], "gu"))}"></div></div>`;
+const val = (id) => (document.getElementById(id)?.value || "").trim() || null;
 function editCp(id) {
   const c = cache.cps.find((x) => x.id === id);
   modal(`<h2>Edit checkpoint</h2>
-    <div class="row"><div><label>Name</label><input id="en" value="${esc(c.name)}"></div><div><label>Area</label><input id="ea" value="${esc(c.area || "")}"></div>
+    <div class="row"><div><label>Name (English)</label><input id="en" value="${esc(c.name)}"></div><div><label>Area</label><input id="ea" value="${esc(c.area || "")}"></div>
     <div><label>Radius (m)</label><input id="er" type="number" value="${c.radius_m}" style="width:90px"></div></div>
+    ${trInputs("tn", c, "name", "Name")}
+    ${trInputs("ta", c, "area", "Area")}
     <div class="row" style="margin-top:10px"><div><label>Latitude</label><input id="elat" value="${c.lat ?? ""}"></div><div><label>Longitude</label><input id="elng" value="${c.lng ?? ""}"></div></div>
     <p><label style="display:inline"><input type="checkbox" id="eg" ${c.gps_required ? "checked" : ""}> Check GPS here (switch off for basement / indoor points with poor GPS)</label></p>
     <p><label style="display:inline"><input type="checkbox" id="eact" ${c.active ? "checked" : ""}> Active</label></p>
     <div class="row" style="justify-content:flex-end"><button class="btn s" onclick="closeModal()">Cancel</button><button class="btn" id="sv">Save</button></div>`);
   sv.onclick = async () => {
     await q(sb.from("checkpoints").update({ name: en.value.trim(), area: ea.value.trim() || null, radius_m: +er.value || 30,
+      name_hi: val("tn_hi"), name_gu: val("tn_gu"), area_hi: val("ta_hi"), area_gu: val("ta_gu"),
       lat: elat.value === "" ? null : +elat.value, lng: elng.value === "" ? null : +elng.value, gps_required: eg.checked, active: eact.checked }).eq("id", id));
     closeModal(); toast("Saved"); go("checkpoints");
   };
@@ -352,27 +370,44 @@ function printQr(ids) {
 }
 
 // ---------- Routes & times ----------
+const MEDIA_TEXT = { auto: "Auto (as in Settings)", photo: "📷 Photo", video: "🎥 10-sec video" };
 VIEWS.routes = async (m, selId) => {
   const { cps, routes, guards } = await lookups();
   const sel = routes.find((r) => r.id === (selId || m.dataset.sel)) || routes[0];
   m.dataset.sel = sel?.id || "";
   let rcs = [], scheds = [];
   if (sel) [rcs, scheds] = await Promise.all([
-    q(sb.from("route_checkpoints").select("checkpoint_id, seq").eq("route_id", sel.id).order("seq")),
+    q(sb.from("route_checkpoints").select("checkpoint_id, seq, media").eq("route_id", sel.id).order("seq")),
     q(sb.from("schedules").select("*").eq("route_id", sel.id).order("start_time")),
   ]);
   const cpName = (id) => cps.find((c) => c.id === id)?.name || "?";
-  m.innerHTML = `<div class="card"><div class="row"><div><label>Route</label><select id="rsel">${routes.map((r) => `<option value="${r.id}" ${r.id === sel?.id ? "selected" : ""}>${esc(r.name)}${r.active ? "" : " (inactive)"}</option>`).join("")}</select></div>
-      <div><label>New route name</label><input id="rnew" placeholder="e.g. Night round – full campus"></div><button class="btn" onclick="addRoute()">Create route</button>
-      ${sel ? `<button class="btn s" onclick="toggleRoute('${sel.id}', ${!sel.active})">${sel.active ? "Deactivate" : "Activate"} route</button>` : ""}</div></div>
+  const mediaSel = (idAttr, v, autoLabel) => `<select ${idAttr}>${["auto", "photo", "video"].map((k) =>
+      `<option value="${k}" ${v === k ? "selected" : ""}>${k === "auto" ? autoLabel : MEDIA_TEXT[k]}</option>`).join("")}</select>`;
+  m.innerHTML = `<div class="card"><h3>New route</h3>
+      <div class="row"><div><label>Route name (English)</label><input id="rnew" placeholder="e.g. Night round – full campus"></div>
+        <div><label>Start date</label><input id="rstart" type="date" value="${todayISO()}"></div>
+        <div><label>End date (optional)</label><input id="rend" type="date"></div>
+        <div><label>Proof at each place</label>${mediaSel('id="rmedia"', "auto", MEDIA_TEXT.auto)}</div>
+        <button class="btn" onclick="addRoute()">Create route</button></div></div>
+    ${routes.length ? `<div class="card"><div class="row"><div><label>Route</label><select id="rsel">${routes.map((r) => `<option value="${r.id}" ${r.id === sel?.id ? "selected" : ""}>${esc(r.name)}${r.active ? "" : " (inactive)"}</option>`).join("")}</select></div>
+      <button class="btn s" onclick="toggleRoute('${sel.id}', ${!sel.active})">${sel.active ? "Deactivate" : "Activate"} route</button></div>
+      <h3 style="margin-top:14px">Route settings</h3>
+      <div class="row"><div><label>Name (English)</label><input id="rn" value="${esc(sel.name)}"></div>
+        <div><label>Start date</label><input id="rs" type="date" value="${sel.start_date || ""}"></div>
+        <div><label>End date (optional)</label><input id="re" type="date" value="${sel.end_date || ""}"></div>
+        <div><label>Proof at each place</label>${mediaSel('id="rm"', sel.media_mode, MEDIA_TEXT.auto)}</div></div>
+      ${trInputs("rt", sel, "name", "Name")}
+      <div class="row" style="margin-top:10px"><button class="btn" onclick="saveRoute('${sel.id}')">Save route settings</button>
+        <span class="muted">Rounds are created only from the start date${sel.end_date ? " until the end date" : ""}.</span></div></div>` : ""}
     ${sel ? `<div class="grid2">
-      <div class="card"><h3>Checkpoints in order</h3><p class="help">Guard sees them in this order. Scanning out of order is allowed but noted.</p>
-        <table>${rcs.map((rc, i) => `<tr><td>${i + 1}</td><td>${esc(cpName(rc.checkpoint_id))}</td><td class="r">
+      <div class="card"><h3>Checkpoints in order</h3><p class="help">Guard sees them in this order. For each place choose photo or video — e.g. <b>video</b> for gates and parking where you want to see the surroundings.</p>
+        <table>${rcs.map((rc, i) => `<tr><td>${i + 1}</td><td>${esc(cpName(rc.checkpoint_id))}</td>
+          <td>${mediaSel(`onchange="setCpMedia('${rc.checkpoint_id}', this.value)"`, rc.media, "Same as route")}</td><td class="r">
           <button class="btn s xs" onclick="moveCp(${i},-1)" ${i ? "" : "disabled"}>↑</button><button class="btn s xs" onclick="moveCp(${i},1)" ${i < rcs.length - 1 ? "" : "disabled"}>↓</button>
           <button class="btn s xs" onclick="moveCp(${i},0)">✕</button></td></tr>`).join("") || `<tr><td class="muted">No checkpoints yet</td></tr>`}</table>
         <div class="row" style="margin-top:10px"><select id="addcp">${cps.filter((c) => c.active && !rcs.some((r) => r.checkpoint_id === c.id)).map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select>
           <button class="btn s" onclick="moveCp(-1, 'add')">Add to route</button></div></div>
-      <div class="card"><h3>Round times</h3><p class="help">Each time creates one round per day. The guard must finish all checkpoints inside the window.</p>
+      <div class="card"><h3>Round times</h3><p class="help">Each time creates one round per day (from the start date). The guard must finish all checkpoints inside the window.</p>
         <table><tr><th>Start</th><th>Window</th><th>Days</th><th>Guard</th><th></th></tr>
         ${scheds.map((s) => `<tr><td><b>${s.start_time.slice(0, 5)}</b></td><td>${s.window_minutes} min</td>
           <td>${s.days.length === 7 ? "Daily" : s.days.map((d) => DAYS[d]).join(" ")}</td>
@@ -387,18 +422,37 @@ VIEWS.routes = async (m, selId) => {
         <div class="row"><div><label>Guard (optional)</label><select id="sg"><option value="">Any guard on duty</option>${guards.filter((g) => g.active).map((g) => `<option value="${g.id}">${esc(g.code)} · ${esc(g.name)}</option>`).join("")}</select></div>
           <button class="btn" onclick="addScheds()">Add</button></div>
         <p class="help" style="margin-top:8px">Tip: for a single round set From = To.</p></div></div>` : `<div class="empty">Create your first route above.</div>`}`;
-  document.getElementById("rsel").onchange = (e) => VIEWS.routes(m, e.target.value);
-  window._rcs = rcs.map((r) => r.checkpoint_id); window._route = sel?.id;
+  const rs = document.getElementById("rsel"); if (rs) rs.onchange = (e) => VIEWS.routes(m, e.target.value);
+  window._rcs = rcs.map((r) => ({ checkpoint_id: r.checkpoint_id, media: r.media || "auto" })); window._route = sel?.id;
 };
-async function addRoute() { if (!rnew.value.trim()) return; const [r] = await q(sb.from("routes").insert({ name: rnew.value.trim() }).select()); document.getElementById("main").dataset.sel = r.id; go("routes"); }
+async function addRoute() {
+  if (!rnew.value.trim()) return toast("Enter a route name", "err");
+  if (!rstart.value) return toast("Choose a start date", "err");
+  if (rend.value && rend.value < rstart.value) return toast("End date is before start date", "err");
+  const [r] = await q(sb.from("routes").insert({ name: rnew.value.trim(), start_date: rstart.value, end_date: rend.value || null, media_mode: rmedia.value }).select());
+  document.getElementById("main").dataset.sel = r.id; toast("Route created"); go("routes");
+}
+async function saveRoute(id) {
+  const $ = (x) => document.getElementById(x), name = $("rn").value.trim(), sd = $("rs").value, ed = $("re").value;
+  if (!name || !sd) return toast("Name and start date are required", "err");
+  if (ed && ed < sd) return toast("End date is before start date", "err");
+  await q(sb.from("routes").update({ name, start_date: sd, end_date: ed || null, media_mode: $("rm").value,
+    name_hi: val("rt_hi"), name_gu: val("rt_gu") }).eq("id", id));
+  toast("Route saved"); VIEWS.routes(document.getElementById("main"), id);
+}
 async function toggleRoute(id, active) { await q(sb.from("routes").update({ active }).eq("id", id)); go("routes"); }
+async function setCpMedia(cpId, media) {
+  await q(sb.from("route_checkpoints").update({ media }).eq("route_id", window._route).eq("checkpoint_id", cpId));
+  const x = window._rcs.find((r) => r.checkpoint_id === cpId); if (x) x.media = media;
+  toast(media === "video" ? "This place will need a 10-sec video" : media === "photo" ? "This place will need a photo" : "Same as route");
+}
 async function moveCp(i, dir) {
-  const list = [...window._rcs];
-  if (dir === "add") { if (!addcp.value) return; list.push(addcp.value); }
+  const list = window._rcs.map((x) => ({ ...x }));
+  if (dir === "add") { if (!addcp.value) return; list.push({ checkpoint_id: addcp.value, media: "auto" }); }
   else if (dir === 0) list.splice(i, 1);
   else { const j = i + dir; [list[i], list[j]] = [list[j], list[i]]; }
   await q(sb.from("route_checkpoints").delete().eq("route_id", window._route));
-  if (list.length) await q(sb.from("route_checkpoints").insert(list.map((c, k) => ({ route_id: window._route, checkpoint_id: c, seq: k + 1 }))));
+  if (list.length) await q(sb.from("route_checkpoints").insert(list.map((c, k) => ({ route_id: window._route, checkpoint_id: c.checkpoint_id, seq: k + 1, media: c.media }))));
   VIEWS.routes(document.getElementById("main"), window._route);
 }
 async function addScheds() {
