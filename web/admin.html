@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Serenity Space · Patrol Admin</title>
+<link rel="icon" href="icon.svg">
+<style>
+  :root { --bg:#f8fafc; --card:#fff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b; --brand:#0369a1;
+          --green:#15803d; --gbg:#dcfce7; --amber:#b45309; --abg:#fef3c7; --red:#b91c1c; --rbg:#fee2e2; --sbg:#f1f5f9; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Gujarati",sans-serif; }
+  header { background:#0f172a; color:#fff; padding:12px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  header b { font-size:16px; } header .sp { flex:1; } header .clk { font-variant-numeric:tabular-nums; color:#bae6fd; }
+  header button { background:none; border:1px solid #475569; color:#cbd5e1; border-radius:8px; padding:5px 10px; cursor:pointer; }
+  nav { display:flex; gap:4px; padding:8px 20px 0; background:#fff; border-bottom:1px solid var(--line); overflow-x:auto; }
+  nav button { border:0; background:none; padding:10px 14px; font-size:14px; color:var(--muted); border-bottom:3px solid transparent; cursor:pointer; white-space:nowrap; }
+  nav button.on { color:var(--brand); border-color:var(--brand); font-weight:600; }
+  nav .badge { background:var(--red); color:#fff; border-radius:99px; padding:1px 7px; font-size:11px; margin-left:4px; }
+  main { padding:18px 20px 60px; max-width:1200px; margin:0 auto; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  .card h3 { margin:0 0 12px; font-size:15px; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:16px; }
+  .kpi { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .kpi .v { font-size:26px; font-weight:700; } .kpi .l { color:var(--muted); font-size:12px; }
+  .kpi.kg .v { color:var(--green); } .kpi.ka .v { color:var(--amber); } .kpi.kr .v { color:var(--red); }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-size:12px; color:var(--muted); font-weight:600; background:#f8fafc; }
+  tr.click { cursor:pointer; } tr.click:hover td { background:#f8fafc; }
+  .chip { display:inline-block; font-size:12px; padding:2px 8px; border-radius:99px; font-weight:600; background:var(--sbg); color:#334155; white-space:nowrap; }
+  .chip.completed,.chip.ok { background:var(--gbg); color:var(--green); }
+  .chip.partial,.chip.review,.chip.in_progress,.chip.due { background:var(--abg); color:var(--amber); }
+  .chip.missed,.chip.rejected,.chip.fraud { background:var(--rbg); color:var(--red); }
+  .flag { display:inline-block; font-size:11px; padding:1px 6px; border-radius:6px; background:var(--abg); color:var(--amber); margin:1px 2px 1px 0; }
+  .flag.f { background:var(--rbg); color:var(--red); }
+  .muted { color:var(--muted); } .r { text-align:right; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:end; }
+  .row > * { flex:0 0 auto; }
+  label { display:block; font-size:12px; color:var(--muted); margin-bottom:3px; }
+  input, select { padding:8px 10px; border:1px solid var(--line); border-radius:8px; font-size:14px; background:#fff; }
+  .btn { background:var(--brand); color:#fff; border:0; border-radius:8px; padding:8px 14px; font-size:14px; cursor:pointer; font-weight:600; }
+  .btn.s { background:#fff; color:var(--text); border:1px solid var(--line); font-weight:500; }
+  .btn.d { background:var(--red); } .btn.g { background:var(--green); }
+  .btn.xs { padding:4px 8px; font-size:12px; }
+  .bar { height:7px; background:var(--sbg); border-radius:99px; overflow:hidden; min-width:80px; }
+  .bar i { display:block; height:100%; background:var(--green); }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; } @media (max-width:800px){ .grid2 { grid-template-columns:1fr; } }
+  .days label { display:inline-flex; align-items:center; gap:3px; margin-right:6px; color:var(--text); font-size:13px; }
+  .modal { position:fixed; inset:0; background:rgba(15,23,42,.55); display:flex; align-items:center; justify-content:center; z-index:30; padding:16px; }
+  .modal .box { background:#fff; border-radius:14px; max-width:860px; width:100%; max-height:92vh; overflow:auto; padding:20px; }
+  .modal .box h2 { margin:0 0 12px; font-size:18px; }
+  .media { width:100%; max-height:62vh; background:#000; border-radius:10px; object-fit:contain; }
+  .login { max-width:360px; margin:80px auto; }
+  .login input { width:100%; margin-bottom:12px; }
+  .empty { color:var(--muted); padding:24px; text-align:center; }
+  .help { color:var(--muted); font-size:13px; margin:-4px 0 12px; }
+  #toast { position:fixed; right:20px; bottom:20px; background:#0f172a; color:#fff; padding:10px 14px; border-radius:10px; opacity:0; transition:.2s; z-index:60; }
+  #toast.show { opacity:1; } #toast.err { background:var(--red); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="vendor/supabase.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+const { sb, esc, fmtDate, fmtTime, fmtDateTime, toast, FLAG_TEXT, FRAUD_FLAGS } = SSP;
+const root = document.getElementById("root");
+const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+let tab = "today", cache = {}, me = null;
+const todayISO = () => SSP.isoDateIST(new Date());
+const addDays = (iso, n) => { const d = new Date(iso + "T12:00:00+05:30"); d.setDate(d.getDate() + n); return SSP.isoDateIST(d); };
+const dayStart = (iso) => iso + "T00:00:00+05:30";
+const q = async (p) => { const { data, error } = await p; if (error) { toast(error.message, "err"); throw error; } return data; };
+const flagHtml = (fl) => (fl || []).map((f) => `<span class="flag ${["OLD_QR","UNKNOWN_QR"].includes(f) ? "f" : ""}" title="${esc(FLAG_TEXT[f] || f)}">${esc(FLAG_TEXT[f] || f)}</span>`).join("");
+const STATUS_TEXT = { completed:"Completed", partial:"Partly done", missed:"Missed", in_progress:"In progress", due:"Due now", upcoming:"Upcoming",
+                      ok:"OK", review:"Check", rejected:"Rejected" };
+const chip = (s) => `<span class="chip ${s}">${STATUS_TEXT[s] || s}</span>`;
+
+// ---------------- Auth ----------------
+async function boot() {
+  if (!sb) { root.innerHTML = `<div class="empty">Setup pending: Supabase keys are not configured in config.js.</div>`; return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return renderLogin();
+  const ok = await sb.rpc("is_admin");
+  if (!ok.data) { root.innerHTML = `<div class="login card"><h3>Not an admin</h3><p class="muted">This login does not have committee access.</p><button class="btn s" onclick="logout()">Log out</button></div>`; return; }
+  me = session.user;
+  const t = await sb.rpc("server_now"); if (t.data) SSP.syncServer(t.data);
+  shell();
+}
+function renderLogin(msg) {
+  root.innerHTML = `<div class="login card"><h3>Serenity Space · Patrol Admin</h3>
+    <label>Email</label><input id="em" type="email" autocomplete="username">
+    <label>Password</label><input id="pw" type="password" autocomplete="current-password">
+    <button class="btn" id="go" style="width:100%">Log in</button>
+    ${msg ? `<p style="color:var(--red)">${esc(msg)}</p>` : ""}</div>`;
+  document.getElementById("go").onclick = async () => {
+    const { error } = await sb.auth.signInWithPassword({ email: em.value.trim(), password: pw.value });
+    if (error) return renderLogin(error.message); boot();
+  };
+}
+async function logout() { await sb.auth.signOut(); location.reload(); }
+
+// ---------------- Shell ----------------
+const TABS = [["today","Today"],["review","Review"],["checkpoints","Checkpoints & QR"],["routes","Routes & times"],["guards","Guards"],["reports","Reports"],["settings","Settings"]];
+function shell() {
+  root.innerHTML = `<header><b>Serenity Space · Guard Patrol</b><span class="sp"></span>
+      <span class="clk" id="clk"></span><span class="muted" style="color:#94a3b8">${esc(me.email)}</span><button onclick="logout()">Log out</button></header>
+    <nav id="nav"></nav><main id="main"></main><div id="toast"></div>`;
+  setInterval(() => { const c = document.getElementById("clk"); if (c) c.textContent = "Server time " + fmtDateTime(SSP.serverNow()); }, 1000);
+  go(tab);
+}
+async function go(t) {
+  tab = t;
+  const pending = await sb.from("scans").select("id", { count:"exact", head:true }).is("reviewed_at", null)
+    .or("status.eq.review,flags.ov.{OLD_QR,UNKNOWN_QR}").gte("scanned_at", new Date(Date.now() - 14 * 864e5).toISOString());
+  document.getElementById("nav").innerHTML = TABS.map(([k, l]) =>
+    `<button class="${k === t ? "on" : ""}" onclick="go('${k}')">${l}${k === "review" && pending.count ? `<span class="badge">${pending.count}</span>` : ""}</button>`).join("");
+  const m = document.getElementById("main"); m.innerHTML = `<div class="empty">Loading…</div>`;
+  try { await VIEWS[t](m); } catch (e) { m.innerHTML = `<div class="empty">Could not load: ${esc(e.message || e)}</div>`; }
+}
+function modal(html) {
+  const el = document.createElement("div"); el.className = "modal";
+  el.innerHTML = `<div class="box">${html}</div>`;
+  el.onclick = (e) => { if (e.target === el) el.remove(); };
+  document.body.appendChild(el); return el;
+}
+const closeModal = () => document.querySelectorAll(".modal").forEach((m) => m.remove());
+
+async function lookups() {
+  const [cps, routes, guards] = await Promise.all([
+    q(sb.from("checkpoints").select("*").order("name")),
+    q(sb.from("routes").select("*").order("name")),
+    q(sb.from("guards").select("*").order("code")),
+  ]);
+  cache = { cps, routes, guards }; return cache;
+}
+
+// ---------------- Views ----------------
+const VIEWS = {};
+
+VIEWS.today = async (m, dateISO) => {
+  const date = dateISO || m.dataset.date || todayISO(); m.dataset.date = date;
+  await q(sb.rpc("ensure_rounds", { p_from: addDays(date, -1), p_to: date }));
+  const [rounds, scans] = await Promise.all([
+    q(sb.from("round_status").select("*").eq("round_date", date).order("due_start")),
+    q(sb.from("scans").select("id,flags,status,scanned_at,round_id").gte("scanned_at", dayStart(date)).lt("scanned_at", dayStart(addDays(date, 1)))),
+  ]);
+  const n = (s) => rounds.filter((r) => r.status === s).length;
+  const fraud = scans.filter((s) => (s.flags || []).some((f) => ["OLD_QR","UNKNOWN_QR"].includes(f))).length;
+  const past = rounds.filter((r) => !["upcoming","due","in_progress"].includes(r.status));
+  const pct = past.length ? Math.round(100 * n("completed") / past.length) : null;
+  m.innerHTML = `
+    <div class="row" style="margin-bottom:14px"><div><label>Date</label><input type="date" id="dt" value="${date}"></div>
+      <button class="btn s" onclick="go('today')">Refresh</button><span class="muted">${fmtDate(date + "T12:00:00+05:30")}</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="v">${rounds.length}</div><div class="l">Rounds scheduled</div></div>
+      <div class="kpi kg"><div class="v">${n("completed")}</div><div class="l">Completed</div></div>
+      <div class="kpi ka"><div class="v">${n("partial")}</div><div class="l">Partly done</div></div>
+      <div class="kpi kr"><div class="v">${n("missed")}</div><div class="l">Missed</div></div>
+      <div class="kpi ka"><div class="v">${scans.filter((s) => s.status === "review").length}</div><div class="l">Scans to check</div></div>
+      <div class="kpi kr"><div class="v">${fraud}</div><div class="l">Fake / old QR attempts</div></div>
+      <div class="kpi ${pct === null ? "" : pct >= 90 ? "kg" : pct >= 70 ? "ka" : "kr"}"><div class="v">${pct === null ? "–" : pct + "%"}</div><div class="l">Completion (finished rounds)</div></div>
+    </div>
+    <div class="card"><h3>Rounds</h3>${rounds.length ? `<table><tr><th>Time</th><th>Route</th><th>Status</th><th>Progress</th><th>Guard</th><th>Last scan</th><th>Flags</th></tr>
+      ${rounds.map((r) => `<tr class="click" onclick="roundDetail('${r.id}')">
+        <td><b>${fmtTime(r.due_start)}</b>–${fmtTime(r.due_end)}</td><td>${esc(r.route_name)}</td><td>${chip(r.status)}</td>
+        <td><div class="bar"><i style="width:${r.total ? 100 * r.done / r.total : 0}%"></i></div><span class="muted">${r.done}/${r.total}</span></td>
+        <td>${esc(r.started_by_name || r.assigned_guard_name || "–")}</td><td>${r.last_scan ? fmtTime(r.last_scan, true) : "–"}</td>
+        <td>${r.flagged ? `<span class="flag">${r.flagged} to check</span>` : ""}${r.rejected ? `<span class="flag f">${r.rejected} rejected</span>` : ""}</td></tr>`).join("")}</table>`
+      : `<div class="empty">No rounds for this date. Set up routes and times first.</div>`}</div>`;
+  document.getElementById("dt").onchange = (e) => VIEWS.today(m, e.target.value);
+};
+
+async function roundDetail(id) {
+  const [r] = await q(sb.from("round_status").select("*").eq("id", id));
+  const [rcs, scans] = await Promise.all([
+    q(sb.from("route_checkpoints").select("seq, checkpoints(id,name,area)").eq("route_id", r.route_id).order("seq")),
+    q(sb.from("scans").select("*, guards(code,name), checkpoints(name), challenges(code)").eq("round_id", id).order("scanned_at")),
+  ]);
+  const rows = rcs.map((rc) => {
+    const s = scans.find((x) => x.checkpoint_id === rc.checkpoints.id && x.status !== "rejected");
+    return `<tr><td>${rc.seq}</td><td>${esc(rc.checkpoints.name)}<br><span class="muted">${esc(rc.checkpoints.area || "")}</span></td>
+      <td>${s ? `<b>${fmtTime(s.scanned_at, true)}</b>` : `<span class="chip missed">Not scanned</span>`}</td>
+      <td>${s ? chip(s.status) + " " + flagHtml(s.flags) : ""}</td>
+      <td>${s?.distance_m != null ? Math.round(s.distance_m) + " m" : ""}</td>
+      <td>${s ? mediaBtn(s) : ""}</td></tr>`;
+  }).join("");
+  const rej = scans.filter((s) => s.status === "rejected");
+  modal(`<h2>${esc(r.route_name)} · ${fmtDate(r.due_start)} ${fmtTime(r.due_start)}–${fmtTime(r.due_end)} ${chip(r.status)}</h2>
+    <p class="muted">Guard: ${esc(r.started_by_name || r.assigned_guard_name || "–")} · ${r.done}/${r.total} checkpoints</p>
+    <table><tr><th>#</th><th>Checkpoint</th><th>Server time</th><th>Result</th><th>From point</th><th>Proof</th></tr>${rows}</table>
+    ${rej.length ? `<h3 style="margin-top:18px">Rejected attempts</h3><table><tr><th>Time</th><th>Guard</th><th>Checkpoint</th><th>Reason</th><th>Proof</th></tr>
+      ${rej.map((s) => `<tr><td>${fmtTime(s.scanned_at, true)}</td><td>${esc(s.guards?.code)}</td><td>${esc(s.checkpoints?.name || "–")}</td><td>${flagHtml(s.flags)}</td><td>${mediaBtn(s)}</td></tr>`).join("")}</table>` : ""}
+    <p style="text-align:right"><button class="btn s" onclick="closeModal()">Close</button></p>`);
+}
+
+function mediaBtn(s) {
+  if (!s.media_path) return s.media_deleted ? `<span class="muted">Deleted (old)</span>` : `<span class="muted">None</span>`;
+  return `<button class="btn s xs" onclick="viewMedia('${s.id}')">${s.media_type === "video" ? "🎥 Video" : "📷 Photo"}</button>`;
+}
+async function viewMedia(scanId) {
+  const [s] = await q(sb.from("scans").select("*, guards(code,name), checkpoints(name,lat,lng), challenges(code, issued_at)").eq("id", scanId));
+  const { data, error } = await sb.storage.from("patrol-media").createSignedUrl(s.media_path, 3600);
+  if (error) return toast(error.message, "err");
+  const map = s.lat != null ? `<a href="https://www.google.com/maps?q=${s.lat},${s.lng}" target="_blank" rel="noopener">Open phone location in map</a>` : "No GPS";
+  const el = modal(`<h2>${esc(s.checkpoints?.name || "Unknown QR")} · ${fmtDateTime(s.scanned_at)}</h2>
+    ${s.media_type === "video" ? `<video class="media" src="${data.signedUrl}" controls autoplay playsinline></video>` : `<img class="media" src="${data.signedUrl}">`}
+    <div class="card" style="margin-top:12px">
+      <b>Verify:</b> the code burned on the ${s.media_type} must read <b style="font-size:18px;color:var(--brand)">${esc(s.challenges?.code || "?")}</b>
+      and the QR must be on a wall/post — not on a phone screen or paper in the hand.
+      <div class="muted" style="margin-top:6px">Guard ${esc(s.guards?.code)} · ${esc(s.guards?.name)} · ${chip(s.status)} ${flagHtml(s.flags)}<br>
+      Distance from checkpoint: ${s.distance_m != null ? Math.round(s.distance_m) + " m" : "–"} · GPS accuracy: ${s.accuracy_m != null ? "±" + Math.round(s.accuracy_m) + " m" : "–"} · QR seen in ${s.qr_frames ?? "–"} frame(s) · ${map}
+      ${s.review_note ? `<br>Note: ${esc(s.review_note)}` : ""}</div></div>
+    <div class="row" style="justify-content:flex-end">
+      <input id="note" placeholder="Note (optional)" style="flex:1;min-width:200px">
+      <button class="btn g" onclick="review('${s.id}','ok')">✓ Genuine</button>
+      <button class="btn d" onclick="review('${s.id}','rejected')">✕ Not genuine</button>
+      <button class="btn s" onclick="closeModal()">Close</button></div>`);
+}
+async function review(id, status) {
+  const note = document.getElementById("note")?.value || null;
+  await q(sb.rpc("admin_review_scan", { p_id: id, p_status: status, p_note: note }));
+  toast(status === "ok" ? "Marked genuine" : "Marked not genuine"); closeModal(); go(tab);
+}
+
+VIEWS.review = async (m) => {
+  const since = new Date(Date.now() - 14 * 864e5).toISOString();
+  const rows = await q(sb.from("scans").select("*, guards(code,name), checkpoints(name), challenges(code)")
+    .is("reviewed_at", null).or("status.eq.review,flags.ov.{OLD_QR,UNKNOWN_QR}").gte("scanned_at", since)
+    .order("scanned_at", { ascending:false }).limit(200));
+  m.innerHTML = `<div class="card"><h3>Scans to check (last 14 days)</h3>
+    <p class="help">Open the photo/video, confirm the burned-in code matches and the QR is on the wall at the right place, then mark it. Red items are attempts with an old or fake QR — strong sign of cheating.</p>
+    ${rows.length ? `<table><tr><th>Server time</th><th>Guard</th><th>Checkpoint</th><th>Status</th><th>Why</th><th>Proof</th></tr>
+    ${rows.map((s) => `<tr><td>${fmtDate(s.scanned_at)} <b>${fmtTime(s.scanned_at, true)}</b></td><td>${esc(s.guards?.code)} · ${esc(s.guards?.name)}</td>
+      <td>${esc(s.checkpoints?.name || "–")}</td><td>${chip(s.status)}</td><td>${flagHtml(s.flags)}</td><td>${mediaBtn(s)}
+      ${!s.media_path ? `<button class="btn s xs" onclick="quickReview('${s.id}')">Mark seen</button>` : ""}</td></tr>`).join("")}</table>`
+    : `<div class="empty">Nothing to check. 👍</div>`}</div>`;
+};
+async function quickReview(id) { await q(sb.rpc("admin_review_scan", { p_id: id, p_status: "rejected", p_note: "Seen" })); go("review"); }
+
+// ---------- Checkpoints ----------
+VIEWS.checkpoints = async (m) => {
+  const { cps } = await lookups();
+  m.innerHTML = `<div class="card"><h3>Add checkpoint</h3>
+    <div class="row"><div><label>Name</label><input id="cn" placeholder="e.g. Main Gate"></div>
+      <div><label>Area / block</label><input id="ca" placeholder="e.g. Entrance"></div>
+      <div><label>GPS radius (m)</label><input id="cr" type="number" value="30" style="width:90px"></div>
+      <button class="btn" onclick="addCp()">Add</button></div></div>
+    <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3 style="margin:0">Checkpoints (${cps.length})</h3>
+      <button class="btn s" onclick="printQr(cache.cps.filter(c=>c.active).map(c=>c.id))">🖨 Print all QR codes</button></div>
+    <p class="help">Stand at each checkpoint with your phone and press <b>📍 Set location here</b> once. Use <b>Replace QR</b> if you suspect a guard has photographed a QR — the old one stops working and any later use of it is flagged as fraud.</p>
+    ${cps.length ? `<table><tr><th>Name</th><th>Location</th><th>GPS check</th><th>QR</th><th>Status</th><th></th></tr>
+    ${cps.map((c) => `<tr><td><b>${esc(c.name)}</b><br><span class="muted">${esc(c.area || "")}</span></td>
+      <td>${c.lat != null ? `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}<br><span class="muted">within ${c.radius_m} m</span>` : `<span class="chip missed">Not set</span>`}</td>
+      <td>${c.gps_required ? "On" : `<span class="muted">Off (indoor)</span>`}</td><td>v${c.qr_version}</td><td>${c.active ? chip("ok").replace("OK", "Active") : `<span class="chip">Inactive</span>`}</td>
+      <td class="r"><button class="btn s xs" onclick="setLoc('${c.id}')">📍 Set location here</button>
+        <button class="btn s xs" onclick="editCp('${c.id}')">Edit</button>
+        <button class="btn s xs" onclick="printQr(['${c.id}'])">🖨 QR</button>
+        <button class="btn s xs" onclick="rekey('${c.id}')">Replace QR</button></td></tr>`).join("")}</table>` : `<div class="empty">No checkpoints yet.</div>`}</div>`;
+};
+async function addCp() {
+  if (!cn.value.trim()) return toast("Enter a name", "err");
+  await q(sb.from("checkpoints").insert({ name: cn.value.trim(), area: ca.value.trim() || null, radius_m: +cr.value || 30 }));
+  toast("Checkpoint added"); go("checkpoints");
+}
+function editCp(id) {
+  const c = cache.cps.find((x) => x.id === id);
+  modal(`<h2>Edit checkpoint</h2>
+    <div class="row"><div><label>Name</label><input id="en" value="${esc(c.name)}"></div><div><label>Area</label><input id="ea" value="${esc(c.area || "")}"></div>
+    <div><label>Radius (m)</label><input id="er" type="number" value="${c.radius_m}" style="width:90px"></div></div>
+    <div class="row" style="margin-top:10px"><div><label>Latitude</label><input id="elat" value="${c.lat ?? ""}"></div><div><label>Longitude</label><input id="elng" value="${c.lng ?? ""}"></div></div>
+    <p><label style="display:inline"><input type="checkbox" id="eg" ${c.gps_required ? "checked" : ""}> Check GPS here (switch off for basement / indoor points with poor GPS)</label></p>
+    <p><label style="display:inline"><input type="checkbox" id="eact" ${c.active ? "checked" : ""}> Active</label></p>
+    <div class="row" style="justify-content:flex-end"><button class="btn s" onclick="closeModal()">Cancel</button><button class="btn" id="sv">Save</button></div>`);
+  sv.onclick = async () => {
+    await q(sb.from("checkpoints").update({ name: en.value.trim(), area: ea.value.trim() || null, radius_m: +er.value || 30,
+      lat: elat.value === "" ? null : +elat.value, lng: elng.value === "" ? null : +elng.value, gps_required: eg.checked, active: eact.checked }).eq("id", id));
+    closeModal(); toast("Saved"); go("checkpoints");
+  };
+}
+function setLoc(id) {
+  const c = cache.cps.find((x) => x.id === id);
+  if (!navigator.geolocation) return toast("This device has no GPS", "err");
+  const el = modal(`<h2>📍 ${esc(c.name)}</h2><p>Stand right next to where the QR will be fixed. Taking readings…</p><p id="gs" style="font-size:18px"></p>
+    <div class="row" style="justify-content:flex-end"><button class="btn s" onclick="closeModal()">Cancel</button><button class="btn" id="gsave" disabled>Save this location</button></div>`);
+  const reads = []; const t0 = Date.now();
+  const w = navigator.geolocation.watchPosition((p) => {
+    reads.push(p.coords);
+    const good = reads.filter((r) => r.accuracy <= Math.max(25, Math.min(...reads.map((x) => x.accuracy)) * 1.5));
+    const wsum = good.reduce((a, r) => a + 1 / r.accuracy, 0);
+    const lat = good.reduce((a, r) => a + r.latitude / r.accuracy, 0) / wsum, lng = good.reduce((a, r) => a + r.longitude / r.accuracy, 0) / wsum;
+    const best = Math.min(...reads.map((x) => x.accuracy));
+    gs.innerHTML = `${reads.length} readings · best accuracy ±${Math.round(best)} m<br><span class="muted">${lat.toFixed(6)}, ${lng.toFixed(6)}</span>`;
+    gsave.disabled = reads.length < 3 && Date.now() - t0 < 8000;
+    gsave.onclick = async () => {
+      navigator.geolocation.clearWatch(w);
+      const radius = Math.max(c.radius_m, Math.min(60, Math.round(best * 1.5)));
+      await q(sb.from("checkpoints").update({ lat, lng, radius_m: radius }).eq("id", id));
+      closeModal(); toast(`Location saved (radius ${radius} m)`); go("checkpoints");
+    };
+  }, (e) => (gs.textContent = "GPS error: " + e.message), { enableHighAccuracy:true, maximumAge:0, timeout:30000 });
+  el.addEventListener("click", (e) => { if (e.target === el) navigator.geolocation.clearWatch(w); });
+}
+async function rekey(id) {
+  const c = cache.cps.find((x) => x.id === id);
+  if (!confirm(`Replace the QR for "${c.name}"?\n\nThe printed QR stops working immediately. Print the new one and fix it at the spot before the next round.`)) return;
+  await q(sb.rpc("admin_rekey_checkpoint", { p_id: id }));
+  await lookups(); printQr([id]); go("checkpoints");
+}
+function printQr(ids) {
+  const list = cache.cps.filter((c) => ids.includes(c.id));
+  if (!list.length) return toast("No checkpoints", "err");
+  const cards = list.map((c) => {
+    const qr = qrcode(0, "M"); qr.addData("SSP1:" + c.qr_token); qr.make();
+    return `<div class="c"><div class="h">SERENITY SPACE</div><div class="s">PATROL CHECKPOINT · પેટ્રોલ ચેકપોઇન્ટ</div>
+      <div class="n">${esc(c.name)}</div><div class="a">${esc(c.area || "")}</div>
+      <div class="q">${qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true })}</div>
+      <div class="f">Scan only with the Serenity Space Patrol app · Do not remove or copy<br>આ QR દૂર કરશો નહીં · ફક્ત પેટ્રોલ એપથી સ્કેન કરવું</div>
+      <div class="v">v${c.qr_version} · printed ${fmtDate(new Date())}</div></div>`;
+  }).join("");
+  const w = window.open("", "_blank");
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Patrol QR codes</title><style>
+    @page { size:A4; margin:10mm; } body { margin:0; font-family:system-ui,"Noto Sans Gujarati",sans-serif; }
+    .c { height:136mm; border:2px dashed #94a3b8; border-radius:6mm; padding:8mm; text-align:center; page-break-inside:avoid; margin-bottom:5mm; display:flex; flex-direction:column; align-items:center; justify-content:space-between; }
+    .h { font-size:22pt; font-weight:800; letter-spacing:2px; color:#0f172a; } .s { font-size:11pt; color:#475569; }
+    .n { font-size:24pt; font-weight:800; margin-top:2mm; } .a { font-size:13pt; color:#334155; }
+    .q svg { width:72mm; height:72mm; } .f { font-size:9.5pt; color:#334155; } .v { font-size:8pt; color:#94a3b8; }
+  </style></head><body>${cards}<script>setTimeout(()=>print(),400)<\/script></body></html>`);
+  w.document.close();
+}
+
+// ---------- Routes & times ----------
+VIEWS.routes = async (m, selId) => {
+  const { cps, routes, guards } = await lookups();
+  const sel = routes.find((r) => r.id === (selId || m.dataset.sel)) || routes[0];
+  m.dataset.sel = sel?.id || "";
+  let rcs = [], scheds = [];
+  if (sel) [rcs, scheds] = await Promise.all([
+    q(sb.from("route_checkpoints").select("checkpoint_id, seq").eq("route_id", sel.id).order("seq")),
+    q(sb.from("schedules").select("*").eq("route_id", sel.id).order("start_time")),
+  ]);
+  const cpName = (id) => cps.find((c) => c.id === id)?.name || "?";
+  m.innerHTML = `<div class="card"><div class="row"><div><label>Route</label><select id="rsel">${routes.map((r) => `<option value="${r.id}" ${r.id === sel?.id ? "selected" : ""}>${esc(r.name)}${r.active ? "" : " (inactive)"}</option>`).join("")}</select></div>
+      <div><label>New route name</label><input id="rnew" placeholder="e.g. Night round – full campus"></div><button class="btn" onclick="addRoute()">Create route</button>
+      ${sel ? `<button class="btn s" onclick="toggleRoute('${sel.id}', ${!sel.active})">${sel.active ? "Deactivate" : "Activate"} route</button>` : ""}</div></div>
+    ${sel ? `<div class="grid2">
+      <div class="card"><h3>Checkpoints in order</h3><p class="help">Guard sees them in this order. Scanning out of order is allowed but noted.</p>
+        <table>${rcs.map((rc, i) => `<tr><td>${i + 1}</td><td>${esc(cpName(rc.checkpoint_id))}</td><td class="r">
+          <button class="btn s xs" onclick="moveCp(${i},-1)" ${i ? "" : "disabled"}>↑</button><button class="btn s xs" onclick="moveCp(${i},1)" ${i < rcs.length - 1 ? "" : "disabled"}>↓</button>
+          <button class="btn s xs" onclick="moveCp(${i},0)">✕</button></td></tr>`).join("") || `<tr><td class="muted">No checkpoints yet</td></tr>`}</table>
+        <div class="row" style="margin-top:10px"><select id="addcp">${cps.filter((c) => c.active && !rcs.some((r) => r.checkpoint_id === c.id)).map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select>
+          <button class="btn s" onclick="moveCp(-1, 'add')">Add to route</button></div></div>
+      <div class="card"><h3>Round times</h3><p class="help">Each time creates one round per day. The guard must finish all checkpoints inside the window.</p>
+        <table><tr><th>Start</th><th>Window</th><th>Days</th><th>Guard</th><th></th></tr>
+        ${scheds.map((s) => `<tr><td><b>${s.start_time.slice(0, 5)}</b></td><td>${s.window_minutes} min</td>
+          <td>${s.days.length === 7 ? "Daily" : s.days.map((d) => DAYS[d]).join(" ")}</td>
+          <td>${esc(guards.find((g) => g.id === s.guard_id)?.code || "Any")}</td>
+          <td class="r"><button class="btn s xs" onclick="toggleSched('${s.id}', ${!s.active})">${s.active ? "Pause" : "Resume"}</button>
+          <button class="btn s xs" onclick="delSched('${s.id}')">✕</button></td></tr>`).join("") || `<tr><td class="muted" colspan="5">No times yet</td></tr>`}</table>
+        <h3 style="margin-top:16px">Add times</h3>
+        <div class="row"><div><label>From</label><input id="sf" type="time" value="22:00"></div><div><label>To</label><input id="st" type="time" value="06:00"></div>
+          <div><label>Every (min)</label><input id="se" type="number" value="120" style="width:80px"></div>
+          <div><label>Window (min)</label><input id="sw" type="number" value="45" style="width:80px"></div></div>
+        <div class="days" style="margin:8px 0">${DAYS.map((d, i) => `<label><input type="checkbox" class="sd" value="${i}" checked>${d}</label>`).join("")}</div>
+        <div class="row"><div><label>Guard (optional)</label><select id="sg"><option value="">Any guard on duty</option>${guards.filter((g) => g.active).map((g) => `<option value="${g.id}">${esc(g.code)} · ${esc(g.name)}</option>`).join("")}</select></div>
+          <button class="btn" onclick="addScheds()">Add</button></div>
+        <p class="help" style="margin-top:8px">Tip: for a single round set From = To.</p></div></div>` : `<div class="empty">Create your first route above.</div>`}`;
+  document.getElementById("rsel").onchange = (e) => VIEWS.routes(m, e.target.value);
+  window._rcs = rcs.map((r) => r.checkpoint_id); window._route = sel?.id;
+};
+async function addRoute() { if (!rnew.value.trim()) return; const [r] = await q(sb.from("routes").insert({ name: rnew.value.trim() }).select()); document.getElementById("main").dataset.sel = r.id; go("routes"); }
+async function toggleRoute(id, active) { await q(sb.from("routes").update({ active }).eq("id", id)); go("routes"); }
+async function moveCp(i, dir) {
+  const list = [...window._rcs];
+  if (dir === "add") { if (!addcp.value) return; list.push(addcp.value); }
+  else if (dir === 0) list.splice(i, 1);
+  else { const j = i + dir; [list[i], list[j]] = [list[j], list[i]]; }
+  await q(sb.from("route_checkpoints").delete().eq("route_id", window._route));
+  if (list.length) await q(sb.from("route_checkpoints").insert(list.map((c, k) => ({ route_id: window._route, checkpoint_id: c, seq: k + 1 }))));
+  VIEWS.routes(document.getElementById("main"), window._route);
+}
+async function addScheds() {
+  const days = [...document.querySelectorAll(".sd:checked")].map((x) => +x.value);
+  if (!days.length) return toast("Pick at least one day", "err");
+  const toMin = (v) => +v.slice(0, 2) * 60 + +v.slice(3, 5);
+  let a = toMin(sf.value), b = toMin(st.value), every = Math.max(15, +se.value || 60);
+  if (b < a) b += 1440;
+  const rows = [];
+  for (let x = a; x <= b; x += every) { const mm = x % 1440; rows.push({ route_id: window._route, start_time: `${String(Math.floor(mm / 60)).padStart(2, "0")}:${String(mm % 60).padStart(2, "0")}`, window_minutes: +sw.value || 45, days, guard_id: sg.value || null }); }
+  if (rows.length > 48) return toast("Too many times — increase 'Every'", "err");
+  await q(sb.from("schedules").insert(rows)); toast(`${rows.length} time(s) added`); VIEWS.routes(document.getElementById("main"), window._route);
+}
+async function toggleSched(id, active) { await q(sb.from("schedules").update({ active }).eq("id", id)); VIEWS.routes(document.getElementById("main"), window._route); }
+async function delSched(id) { if (!confirm("Delete this time? Past rounds stay in the records.")) return; await q(sb.from("schedules").delete().eq("id", id)); VIEWS.routes(document.getElementById("main"), window._route); }
+
+// ---------- Guards ----------
+VIEWS.guards = async (m) => {
+  const { guards } = await lookups();
+  m.innerHTML = `<div class="card"><h3>Add guard</h3>
+    <div class="row"><div><label>Guard code (login)</label><input id="gc" placeholder="G01" style="width:90px"></div><div><label>Name</label><input id="gn"></div>
+      <div><label>Mobile</label><input id="gp" style="width:130px"></div><div><label>Agency</label><input id="gag" style="width:140px"></div>
+      <div><label>6-digit PIN</label><input id="gpin" inputmode="numeric" maxlength="6" style="width:100px"></div><button class="btn" onclick="addGuard()">Add guard</button></div>
+    <p class="help" style="margin-top:8px">The guard logs in with the code + PIN. The account locks to the first phone used; use <b>Reset phone</b> when a guard changes phones.</p></div>
+    <div class="card"><h3>Guards (${guards.length})</h3>${guards.length ? `<table><tr><th>Code</th><th>Name</th><th>Mobile</th><th>Agency</th><th>Phone lock</th><th>Status</th><th></th></tr>
+    ${guards.map((g) => `<tr><td><b>${esc(g.code)}</b></td><td>${esc(g.name)}</td><td>${esc(g.phone || "")}</td><td>${esc(g.agency || "")}</td>
+      <td>${g.device_id ? `Locked ${g.device_bound_at ? fmtDate(g.device_bound_at) : ""}` : `<span class="muted">Not yet used</span>`}</td>
+      <td>${g.active ? `<span class="chip ok">Active</span>` : `<span class="chip">Inactive</span>`}</td>
+      <td class="r"><button class="btn s xs" onclick="resetPin('${g.id}')">Reset PIN</button>
+        <button class="btn s xs" onclick="resetPhone('${g.id}')">Reset phone</button>
+        <button class="btn s xs" onclick="toggleGuard('${g.id}', ${!g.active})">${g.active ? "Deactivate" : "Activate"}</button></td></tr>`).join("")}</table>`
+      : `<div class="empty">No guards yet.</div>`}</div>`;
+};
+async function fn(body) {
+  const { data, error } = await sb.functions.invoke("admin", { body });
+  if (error) { let msg = error.message; try { msg = (await error.context.json()).error || msg; } catch (e) {} toast(msg, "err"); throw new Error(msg); }
+  if (data?.error) { toast(data.error, "err"); throw new Error(data.error); }
+  return data;
+}
+async function addGuard() {
+  await fn({ action:"create_guard", code: gc.value, name: gn.value.trim(), phone: gp.value.trim(), agency: gag.value.trim(), pin: gpin.value.trim() });
+  toast("Guard added"); go("guards");
+}
+async function resetPin(id) { const pin = prompt("New 6-digit PIN"); if (!pin) return; await fn({ action:"set_pin", guard_id:id, pin }); toast("PIN changed"); }
+async function resetPhone(id) { if (!confirm("Allow this guard to log in from a new phone? The next phone used will be locked.")) return; await q(sb.rpc("admin_reset_device", { p_guard:id })); toast("Phone reset"); go("guards"); }
+async function toggleGuard(id, active) { await q(sb.from("guards").update({ active }).eq("id", id)); go("guards"); }
+
+// ---------- Reports ----------
+VIEWS.reports = async (m, from0, to0) => {
+  const to = to0 || todayISO(), from = from0 || addDays(to, -6);
+  await q(sb.rpc("ensure_rounds", { p_from: from, p_to: to }));
+  const [rounds, scans, { guards }] = await Promise.all([
+    q(sb.from("round_status").select("*").gte("round_date", from).lte("round_date", to).order("due_start")),
+    q(sb.from("scans").select("*, guards(code,name), checkpoints(name)").gte("scanned_at", dayStart(from)).lt("scanned_at", dayStart(addDays(to, 1))).order("scanned_at").limit(10000)),
+    lookups(),
+  ]);
+  const finished = rounds.filter((r) => ["completed","partial","missed"].includes(r.status));
+  const c = (s) => finished.filter((r) => r.status === s).length;
+  const pct = finished.length ? Math.round(100 * c("completed") / finished.length) : 0;
+  const byGuard = guards.map((g) => {
+    const s = scans.filter((x) => x.guard_id === g.id);
+    return { g, ok: s.filter((x) => x.status === "ok").length, review: s.filter((x) => x.status === "review").length,
+      rej: s.filter((x) => x.status === "rejected").length, fraud: s.filter((x) => (x.flags || []).some((f) => ["OLD_QR","UNKNOWN_QR","OUT_OF_ZONE"].includes(f))).length,
+      rounds: new Set(rounds.filter((r) => r.started_by === g.id).map((r) => r.id)).size };
+  }).filter((x) => x.ok + x.review + x.rej > 0 || x.g.active);
+  const days = [...new Set(rounds.map((r) => r.round_date))];
+  window._report = { rounds, scans, from, to };
+  m.innerHTML = `<div class="card"><div class="row"><div><label>From</label><input type="date" id="rf" value="${from}"></div><div><label>To</label><input type="date" id="rt" value="${to}"></div>
+      <button class="btn" onclick="VIEWS.reports(document.getElementById('main'), rf.value, rt.value)">Show</button>
+      <button class="btn s" onclick="csvRounds()">⬇ Rounds CSV</button><button class="btn s" onclick="csvScans()">⬇ Scans CSV</button></div></div>
+    <div class="kpis"><div class="kpi"><div class="v">${finished.length}</div><div class="l">Rounds due (${fmtDate(from + "T12:00:00+05:30")} – ${fmtDate(to + "T12:00:00+05:30")})</div></div>
+      <div class="kpi kg"><div class="v">${c("completed")}</div><div class="l">Completed</div></div><div class="kpi ka"><div class="v">${c("partial")}</div><div class="l">Partly done</div></div>
+      <div class="kpi kr"><div class="v">${c("missed")}</div><div class="l">Missed</div></div>
+      <div class="kpi ${pct >= 90 ? "kg" : pct >= 70 ? "ka" : "kr"}"><div class="v">${pct}%</div><div class="l">Completion</div></div></div>
+    <div class="grid2"><div class="card"><h3>By guard</h3><table><tr><th>Guard</th><th class="r">Rounds</th><th class="r">OK scans</th><th class="r">To check</th><th class="r">Rejected</th><th class="r">Warning signs</th></tr>
+      ${byGuard.map((x) => `<tr><td>${esc(x.g.code)} · ${esc(x.g.name)}</td><td class="r">${x.rounds}</td><td class="r">${x.ok}</td><td class="r">${x.review}</td><td class="r">${x.rej}</td>
+        <td class="r">${x.fraud ? `<span class="chip fraud">${x.fraud}</span>` : "0"}</td></tr>`).join("")}</table>
+      <p class="help" style="margin-top:8px">Warning signs = old/fake QR, or scanned away from the checkpoint.</p></div>
+    <div class="card"><h3>By day</h3><table><tr><th>Date</th><th class="r">Rounds</th><th class="r">Completed</th><th class="r">Partly</th><th class="r">Missed</th></tr>
+      ${days.map((d) => { const rr = rounds.filter((r) => r.round_date === d); const k = (s) => rr.filter((r) => r.status === s).length;
+        return `<tr><td>${fmtDate(d + "T12:00:00+05:30")}</td><td class="r">${rr.length}</td><td class="r">${k("completed")}</td><td class="r">${k("partial")}</td><td class="r">${k("missed") ? `<b style="color:var(--red)">${k("missed")}</b>` : 0}</td></tr>`; }).join("")}</table></div></div>`;
+};
+function csv(name, rows) {
+  const s = rows.map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + s], { type:"text/csv" })); a.download = name; a.click();
+}
+function csvRounds() { const { rounds, from, to } = window._report;
+  csv(`Serenity_Space_Patrol_Rounds_${from}_to_${to}.csv`, [["Date","Start","End","Route","Status","Done","Total","Guard","Flagged","Rejected"],
+    ...rounds.map((r) => [fmtDate(r.due_start), fmtTime(r.due_start), fmtTime(r.due_end), r.route_name, STATUS_TEXT[r.status], r.done, r.total, r.started_by_name || r.assigned_guard_name || "", r.flagged, r.rejected])]); }
+function csvScans() { const { scans, from, to } = window._report;
+  csv(`Serenity_Space_Patrol_Scans_${from}_to_${to}.csv`, [["Date","Server time","Guard","Checkpoint","Status","Flags","Distance m","GPS accuracy m","Media"],
+    ...scans.map((s) => [fmtDate(s.scanned_at), fmtTime(s.scanned_at, true), s.guards?.code, s.checkpoints?.name || "", STATUS_TEXT[s.status], (s.flags || []).join(" "), s.distance_m ?? "", s.accuracy_m != null ? Math.round(s.accuracy_m) : "", s.media_type])]); }
+
+// ---------- Settings ----------
+VIEWS.settings = async (m) => {
+  const rows = await q(sb.from("app_settings").select("*").order("key"));
+  m.innerHTML = `<div class="card"><h3>Rules</h3><table><tr><th>Setting</th><th>Value</th><th>Meaning</th><th></th></tr>
+    ${rows.map((r) => `<tr><td><code>${esc(r.key)}</code></td><td><input id="set_${r.key}" value="${esc(r.value)}" style="width:200px"></td><td class="muted">${esc(r.note || "")}</td>
+      <td><button class="btn s xs" onclick="saveSetting('${r.key}')">Save</button></td></tr>`).join("")}</table></div>
+    <div class="grid2"><div class="card"><h3>Free up storage</h3><p class="help">Deletes photos/videos older than <b>media_retention_days</b>. Scan records stay.</p>
+      <button class="btn s" onclick="cleanup()">Delete old media now</button></div>
+    <div class="card"><h3>Add committee admin</h3><div class="row"><div><label>Name</label><input id="an"></div><div><label>Email</label><input id="ae" type="email"></div>
+      <div><label>Password (8+)</label><input id="ap" type="text"></div><button class="btn" onclick="addAdmin()">Add</button></div></div></div>`;
+};
+async function saveSetting(k) { await q(sb.from("app_settings").update({ value: document.getElementById("set_" + k).value.trim() }).eq("key", k)); toast("Saved"); }
+async function cleanup() { const r = await fn({ action:"cleanup_media" }); toast(`Deleted ${r.removed} file(s) older than ${r.older_than_days} days`); }
+async function addAdmin() { await fn({ action:"create_admin", name: an.value.trim(), email: ae.value.trim(), password: ap.value }); toast("Admin added"); an.value = ae.value = ap.value = ""; }
+
+boot();
+</script>
+</body>
+</html>

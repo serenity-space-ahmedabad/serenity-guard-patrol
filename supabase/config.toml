@@ -1,0 +1,4 @@
+project_id = "serenity-guard-patrol"
+
+[functions.admin]
+verify_jwt = true
