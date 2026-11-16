@@ -41,6 +41,7 @@
   }
 
   const FLAG_TEXT = {
+    NO_QR: "QR not scanned – video + reason",
     OLD_QR: "Old / copied QR used (fraud attempt)",
     UNKNOWN_QR: "Not a patrol QR",
     NOT_ON_ROUTE: "Checkpoint not in this round",

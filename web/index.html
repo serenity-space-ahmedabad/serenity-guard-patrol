@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="hi">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -8,66 +8,109 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg">
 <style>
-  :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#f1f5f9; --muted:#94a3b8;
+  :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#f8fafc; --muted:#a5b4c8;
           --green:#22c55e; --amber:#f59e0b; --red:#ef4444; --blue:#38bdf8; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { margin:0; background:var(--bg); color:var(--text);
-    font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Gujarati","Noto Sans Devanagari",sans-serif; }
-  .wrap { max-width:520px; margin:0 auto; padding:16px 16px 40px; }
+    font:17px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Gujarati","Noto Sans Devanagari",sans-serif; }
+  .wrap { max-width:520px; margin:0 auto; padding:14px 14px 40px; }
   header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
-  .brand { font-weight:700; font-size:18px; }
+  .brand { font-weight:800; font-size:19px; }
   .brand small { display:block; color:var(--muted); font-weight:500; font-size:13px; }
-  .langs button { background:none; border:1px solid var(--line); color:var(--muted); border-radius:8px;
-    padding:4px 8px; font-size:13px; margin-left:4px; }
-  .langs button.on { color:var(--text); border-color:var(--blue); }
-  .clock { background:var(--card); border-radius:14px; padding:14px 16px; margin-bottom:12px; text-align:center; }
-  .clock .t { font-size:40px; font-weight:700; letter-spacing:1px; font-variant-numeric:tabular-nums; }
-  .clock .d { color:var(--muted); font-size:14px; }
-  .warn { background:#451a03; border:1px solid var(--amber); color:#fde68a; border-radius:12px; padding:10px 12px; margin-bottom:12px; font-size:14px; }
-  .card { background:var(--card); border-radius:14px; padding:14px 16px; margin-bottom:12px; border:1px solid transparent; }
-  .card.open { border-color:var(--blue); }
-  .row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
-  .route { font-weight:700; font-size:17px; }
-  .win { color:var(--muted); font-size:14px; }
-  .chip { font-size:12px; padding:3px 8px; border-radius:999px; font-weight:600; white-space:nowrap; }
-  .chip.open { background:#0c4a6e; color:#bae6fd; } .chip.done { background:#14532d; color:#bbf7d0; } .chip.soon { background:#334155; color:#cbd5e1; }
-  .bar { height:8px; background:#0b1220; border-radius:99px; overflow:hidden; margin:10px 0; }
-  .bar i { display:block; height:100%; background:var(--green); }
-  ol { margin:6px 0 0; padding-left:0; list-style:none; }
-  ol li { display:flex; gap:10px; align-items:center; padding:7px 0; border-top:1px solid var(--line); font-size:15px; }
-  ol li .n { width:24px; height:24px; border-radius:50%; background:#0b1220; display:grid; place-items:center; font-size:12px; color:var(--muted); flex:none; }
+  .tools { display:flex; gap:6px; align-items:center; }
+  .tools button { background:var(--card); border:2px solid var(--line); color:var(--text); border-radius:12px;
+    min-width:46px; height:46px; font-size:17px; font-weight:700; padding:0 8px; }
+  .tools button.on { border-color:var(--blue); background:#0c4a6e; }
+  .clock { background:var(--card); border-radius:16px; padding:10px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; }
+  .clock .t { font-size:34px; font-weight:800; font-variant-numeric:tabular-nums; }
+  .clock .d { color:var(--muted); font-size:13px; text-align:right; }
+  .warn { background:#451a03; border:2px solid var(--amber); color:#fde68a; border-radius:14px; padding:12px; margin-bottom:12px; font-size:16px; }
+  .card { background:var(--card); border-radius:18px; padding:16px; margin-bottom:12px; }
+  /* Next place tile */
+  .next { background:linear-gradient(160deg,#0c4a6e,#1e3a8a); border:3px solid var(--blue); border-radius:22px; padding:18px; margin-bottom:12px; text-align:center; }
+  .next .lbl { font-size:16px; font-weight:800; letter-spacing:1px; color:#bae6fd; }
+  .next .step { display:inline-block; background:rgba(255,255,255,.15); border-radius:99px; padding:3px 12px; font-size:15px; margin-top:4px; }
+  .next .ico { font-size:64px; line-height:1; margin:10px 0 4px; }
+  .next .name { font-size:30px; font-weight:800; line-height:1.15; }
+  .next .area { font-size:17px; color:#cbd5e1; margin-top:2px; }
+  .next .vid { display:inline-block; margin-top:8px; background:#7f1d1d; color:#fecaca; padding:4px 12px; border-radius:99px; font-weight:700; }
+  .next .due { margin-top:10px; font-size:16px; color:#fde68a; font-weight:700; }
+  .big { display:flex; align-items:center; justify-content:center; gap:12px; width:100%; border:0; border-radius:20px; padding:20px;
+    font-size:24px; font-weight:800; background:var(--green); color:#052e16; margin-top:14px; box-shadow:0 6px 0 #15803d; }
+  .big:active { transform:translateY(3px); box-shadow:0 3px 0 #15803d; }
+  .big .i { font-size:34px; }
+  .row2 { display:flex; gap:10px; margin-top:12px; }
+  .mid { flex:1; border:2px solid rgba(255,255,255,.35); background:rgba(255,255,255,.08); color:#fff; border-radius:16px; padding:12px 8px;
+    font-size:16px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .mid .i { font-size:26px; }
+  .mid.warnb { border-color:var(--amber); color:#fde68a; }
+  .dots { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin:6px 0 2px; }
+  .dot { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; font-weight:800; font-size:15px; background:#0b1220; color:var(--muted); border:2px solid var(--line); }
+  .dot.ok { background:var(--green); color:#052e16; border-color:var(--green); }
+  .dot.cur { border-color:#fff; color:#fff; box-shadow:0 0 0 3px rgba(56,189,248,.5); }
+  .status { text-align:center; padding:26px 14px; border-radius:22px; margin-bottom:12px; }
+  .status .ico { font-size:70px; line-height:1; }
+  .status h2 { margin:10px 0 4px; font-size:26px; }
+  .status p { margin:4px 0; color:var(--muted); font-size:18px; }
+  .status.done { background:#14532d; } .status.wait { background:var(--card); }
+  details { background:var(--card); border-radius:16px; padding:12px 14px; margin-bottom:12px; }
+  summary { font-weight:700; font-size:17px; cursor:pointer; }
+  ol { margin:8px 0 0; padding:0; list-style:none; }
+  ol li { display:flex; gap:10px; align-items:center; padding:9px 0; border-top:1px solid var(--line); font-size:17px; }
+  ol li .n { width:30px; height:30px; border-radius:50%; background:#0b1220; display:grid; place-items:center; font-size:14px; color:var(--muted); flex:none; }
   ol li.ok .n { background:var(--green); color:#052e16; }
-  ol li .a { color:var(--muted); font-size:12px; }
-  .btn { display:block; width:100%; border:0; border-radius:14px; padding:16px; font-size:18px; font-weight:700;
-    background:var(--blue); color:#082f49; margin-top:12px; }
-  .btn:disabled { opacity:.4; }
-  .btn.ghost { background:none; border:1px solid var(--line); color:var(--text); font-weight:600; font-size:16px; padding:12px; }
-  input { width:100%; padding:14px; font-size:20px; border-radius:12px; border:1px solid var(--line); background:#0b1220; color:var(--text); margin:6px 0 12px; letter-spacing:2px; }
-  label { color:var(--muted); font-size:14px; }
-  select.sel { width:100%; padding:14px; font-size:18px; border-radius:12px; border:1px solid var(--line); background:#0b1220; color:var(--text); margin:6px 0 12px; }
-  .seg { display:flex; background:var(--card); border-radius:12px; padding:4px; margin-bottom:12px; }
-  .seg button { flex:1; border:0; background:none; color:var(--muted); padding:10px; border-radius:9px; font-size:15px; font-weight:600; }
+  ol li .a { color:var(--muted); font-size:13px; }
+  .alerts { display:flex; align-items:center; gap:12px; width:100%; border:2px dashed var(--amber); background:#422006; color:#fde68a; border-radius:18px; padding:14px; font-size:18px; font-weight:800; margin-bottom:12px; text-align:left; }
+  .alerts .i { font-size:34px; } .alerts small { display:block; font-weight:500; font-size:14px; color:#fcd34d; }
+  .btn { display:block; width:100%; border:0; border-radius:16px; padding:18px; font-size:20px; font-weight:800; background:var(--blue); color:#082f49; margin-top:12px; }
+  .btn.ghost { background:none; border:2px solid var(--line); color:var(--text); font-weight:700; font-size:17px; padding:14px; }
+  .btn.amber { background:var(--amber); color:#422006; }
+  input, textarea { width:100%; padding:14px; font-size:20px; border-radius:14px; border:2px solid var(--line); background:#0b1220; color:var(--text); margin:6px 0 12px; font-family:inherit; }
+  textarea { font-size:18px; min-height:80px; }
+  label { color:var(--muted); font-size:15px; font-weight:600; }
+  select.sel { width:100%; padding:16px; font-size:20px; border-radius:14px; border:2px solid var(--line); background:#0b1220; color:var(--text); margin:6px 0 12px; }
+  .seg { display:flex; background:var(--card); border-radius:14px; padding:4px; margin-bottom:12px; }
+  .seg button { flex:1; border:0; background:none; color:var(--muted); padding:12px; border-radius:11px; font-size:17px; font-weight:700; }
   .seg button.on { background:var(--blue); color:#082f49; }
-  .empty { color:var(--muted); text-align:center; padding:30px 10px; }
-  .foot { text-align:center; color:var(--muted); font-size:12px; margin-top:20px; }
-  .link { background:none; border:0; color:var(--muted); text-decoration:underline; font-size:14px; }
+  .foot { text-align:center; color:var(--muted); font-size:13px; margin-top:20px; }
+  .link { background:none; border:0; color:var(--muted); text-decoration:underline; font-size:15px; padding:10px; }
   /* Scanner */
   #scan { position:fixed; inset:0; background:#000; display:none; z-index:10; }
   #scan canvas { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
   #scan video { position:absolute; width:1px; height:1px; opacity:0; }
   #scan .top { position:absolute; left:0; right:0; top:0; padding:12px; display:flex; justify-content:space-between; align-items:center; z-index:2; }
-  #scan .hint { position:absolute; left:12px; right:12px; bottom:90px; text-align:center; font-size:20px; font-weight:700; text-shadow:0 2px 6px #000; z-index:2; }
-  #scan .cancel { position:absolute; left:12px; right:12px; bottom:20px; z-index:2; }
-  #scan .timer { background:rgba(0,0,0,.6); padding:6px 10px; border-radius:10px; font-variant-numeric:tabular-nums; }
-  #scan .frame { position:absolute; left:50%; top:50%; width:62vmin; height:62vmin; transform:translate(-50%,-55%);
-    border:3px solid rgba(255,255,255,.85); border-radius:18px; box-shadow:0 0 0 2000px rgba(0,0,0,.18); z-index:1; pointer-events:none; }
+  #scan .hint { position:absolute; left:12px; right:12px; bottom:150px; text-align:center; font-size:23px; font-weight:800; text-shadow:0 2px 8px #000; z-index:2; }
+  #scan .bottom { position:absolute; left:12px; right:12px; bottom:18px; z-index:2; display:flex; gap:10px; }
+  #scan .bottom button { flex:1; margin:0; }
+  #scan .timer { background:rgba(0,0,0,.65); padding:8px 12px; border-radius:12px; font-variant-numeric:tabular-nums; font-size:17px; font-weight:700; }
+  #scan .frame { position:absolute; left:50%; top:50%; width:62vmin; height:62vmin; transform:translate(-50%,-58%);
+    border:4px solid rgba(255,255,255,.9); border-radius:22px; box-shadow:0 0 0 2000px rgba(0,0,0,.2); z-index:1; pointer-events:none; }
   #scan.rec .frame { border-color:var(--red); }
-  #result { position:fixed; inset:0; display:none; z-index:20; background:var(--bg); padding:30px 20px; text-align:center; }
-  #result .big { font-size:88px; line-height:1; margin:30px 0 10px; }
-  #result h2 { margin:8px 0; font-size:24px; }
-  #result p { color:var(--muted); font-size:16px; }
-  #toast { position:fixed; left:16px; right:16px; bottom:20px; background:#334155; color:#fff; padding:12px 14px; border-radius:12px;
-    opacity:0; transform:translateY(20px); transition:.25s; z-index:50; text-align:center; }
+  #scan.manual .frame { display:none; }
+  #scan .count { position:absolute; inset:0; display:none; place-items:center; font-size:140px; font-weight:900; color:#fff; text-shadow:0 4px 20px #000; z-index:3; }
+  /* Full-screen panels */
+  .panel { position:fixed; inset:0; display:none; z-index:20; background:var(--bg); overflow:auto; }
+  .panel .wrap { padding-top:24px; }
+  .panel h2 { font-size:26px; text-align:center; margin:10px 0 16px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .choice { border:3px solid var(--line); background:var(--card); color:var(--text); border-radius:20px; padding:18px 8px; font-size:18px; font-weight:800;
+    display:flex; flex-direction:column; align-items:center; gap:8px; min-height:130px; justify-content:center; text-align:center; }
+  .choice .i { font-size:48px; line-height:1; }
+  .choice.sel { border-color:var(--blue); background:#0c4a6e; }
+  .placeBtn { display:flex; align-items:center; gap:14px; width:100%; border:2px solid var(--line); background:var(--card); color:var(--text);
+    border-radius:16px; padding:14px; font-size:20px; font-weight:700; margin-bottom:10px; text-align:left; }
+  .placeBtn .i { font-size:34px; }
+  .mic { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; border:3px solid var(--blue); background:#0c4a6e; color:#fff;
+    border-radius:20px; padding:18px; font-size:22px; font-weight:800; margin:12px 0; }
+  .mic.on { border-color:var(--red); background:#7f1d1d; animation:pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity:.6; } }
+  #result .ico { font-size:96px; line-height:1; text-align:center; margin-top:30px; }
+  #result h2 { margin:12px 0 6px; }
+  #result .sub { text-align:center; color:var(--muted); font-size:18px; }
+  #banner { position:fixed; left:10px; right:10px; top:10px; z-index:40; display:none; background:var(--amber); color:#422006; border-radius:18px;
+    padding:16px; font-size:20px; font-weight:800; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.5); animation:pulse 1s 4; }
+  #toast { position:fixed; left:16px; right:16px; bottom:20px; background:#334155; color:#fff; padding:14px; border-radius:14px; font-size:17px;
+    opacity:0; transform:translateY(20px); transition:.25s; z-index:50; text-align:center; pointer-events:none; }
   #toast.show { opacity:1; transform:none; } #toast.err { background:#7f1d1d; }
 </style>
 </head>
@@ -78,326 +121,24 @@
   <video id="vid" playsinline muted></video>
   <canvas id="cv"></canvas>
   <div class="frame"></div>
+  <div class="count" id="count"></div>
   <div class="top"><span class="timer" id="timer"></span><span class="timer" id="mode"></span></div>
   <div class="hint" id="hint"></div>
-  <button class="btn ghost cancel" id="cancelScan"></button>
+  <div class="bottom">
+    <button class="btn ghost" id="cancelScan"></button>
+    <button class="btn amber" id="noqrBtn" style="display:none"></button>
+  </div>
 </div>
 
-<div id="result"></div>
+<div class="panel" id="flow"><div class="wrap" id="flowIn"></div></div>
+<div class="panel" id="result"><div class="wrap" id="resultIn"></div></div>
+<div id="banner"></div>
 
 <script src="vendor/supabase.js"></script>
 <script src="vendor/jsQR.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script src="i18n.js"></script>
-<script>
-const T = {
-  en: { pickGuard:"Select your name", fl_OLD_QR:"This QR is no longer valid. The committee has been informed.", fl_UNKNOWN_QR:"This is not a Serenity Space patrol QR.", fl_NOT_ON_ROUTE:"This place is not part of this round.", fl_DUPLICATE:"This place is already done for this round.", fl_NO_MEDIA:"Photo/video did not upload. Please scan again.", fl_EXPIRED:"Took too long. Please scan again.", fl_OUT_OF_ZONE:"You seem to be away from this place (GPS)", fl_NO_GPS:"GPS was off", fl_TOO_FAST:"Too quick after the previous place", fl_OTHER_PHONE:"A different phone was used", fl_LATE:"After the round time", fl_LOW_GPS:"Weak GPS", fl_OUT_OF_ORDER:"Not in route order", needVideo:"This place needs a VIDEO", guardTab:"Guard", committeeTab:"Committee", email:"Email", password:"Password", sub:"Guard Patrol", code:"Guard code", pin:"6-digit PIN", login:"Log in", logout:"Log out",
-        server:"Server time (India)", phoneWarn:"This phone is not registered for you. Your scans will be marked for checking. Ask the committee to reset your phone.",
-        none:"No rounds right now.", open:"Round open", soon:"Starts", done:"Completed", until:"Finish by",
-        scan:"Scan next checkpoint", allDone:"All checkpoints done ✓", point:"Point the camera at the checkpoint QR",
-        keep:"Keep QR in view, then slowly show the area around", photo:"Photo taken", up:"Uploading…",
-        check:"Checking…", ok:"Recorded", review:"Recorded — committee will check", bad:"Not accepted",
-        back:"Back", cancel:"Cancel", left:"left", gpsOff:"GPS is off — please turn on Location",
-        camErr:"Camera not available. Allow camera permission for this site.", notOurs:"This is not a patrol QR",
-        video:"VIDEO", photoM:"PHOTO", wrongLogin:"Wrong guard code or PIN", progress:"done" },
-  hi: { pickGuard:"अपना नाम चुनें", fl_OLD_QR:"यह QR अब मान्य नहीं है। कमेटी को सूचित कर दिया गया है।", fl_UNKNOWN_QR:"यह सेरेनिटी स्पेस का पेट्रोल QR नहीं है।", fl_NOT_ON_ROUTE:"यह जगह इस राउंड में शामिल नहीं है।", fl_DUPLICATE:"यह जगह इस राउंड में पहले ही हो चुकी है।", fl_NO_MEDIA:"फोटो/वीडियो अपलोड नहीं हुआ। फिर से स्कैन करें।", fl_EXPIRED:"बहुत देर हो गई। फिर से स्कैन करें।", fl_OUT_OF_ZONE:"आप इस जगह से दूर लगते हैं (GPS)", fl_NO_GPS:"GPS बंद था", fl_TOO_FAST:"पिछली जगह के बाद बहुत जल्दी", fl_OTHER_PHONE:"दूसरे फोन का उपयोग हुआ", fl_LATE:"राउंड के समय के बाद", fl_LOW_GPS:"कमज़ोर GPS", fl_OUT_OF_ORDER:"रूट के क्रम में नहीं", needVideo:"इस जगह के लिए वीडियो ज़रूरी है", guardTab:"गार्ड", committeeTab:"कमेटी", email:"ईमेल", password:"पासवर्ड", sub:"गार्ड पेट्रोल", code:"गार्ड कोड", pin:"6 अंकों का पिन", login:"लॉग इन", logout:"लॉग आउट",
-        server:"सर्वर समय (भारत)", phoneWarn:"यह फोन आपके नाम पर रजिस्टर नहीं है। आपके स्कैन जाँच के लिए चिह्नित होंगे। कमेटी से फोन रीसेट करवाएँ।",
-        none:"अभी कोई राउंड नहीं है।", open:"राउंड चालू", soon:"शुरू", done:"पूरा", until:"पूरा करें",
-        scan:"अगला चेकपॉइंट स्कैन करें", allDone:"सभी चेकपॉइंट पूरे ✓", point:"कैमरा चेकपॉइंट के QR पर रखें",
-        keep:"QR दिखाते रहें, फिर धीरे से आसपास की जगह दिखाएँ", photo:"फोटो लिया गया", up:"अपलोड हो रहा है…",
-        check:"जाँच हो रही है…", ok:"दर्ज हो गया", review:"दर्ज — कमेटी जाँच करेगी", bad:"स्वीकार नहीं",
-        back:"वापस", cancel:"रद्द करें", left:"बाकी", gpsOff:"GPS बंद है — लोकेशन चालू करें",
-        camErr:"कैमरा उपलब्ध नहीं। इस साइट को कैमरा की अनुमति दें।", notOurs:"यह पेट्रोल QR नहीं है",
-        video:"वीडियो", photoM:"फोटो", wrongLogin:"गलत गार्ड कोड या पिन", progress:"पूरे" },
-  gu: { pickGuard:"તમારું નામ પસંદ કરો", fl_OLD_QR:"આ QR હવે માન્ય નથી. કમિટીને જાણ કરવામાં આવી છે.", fl_UNKNOWN_QR:"આ સેરેનિટી સ્પેસનો પેટ્રોલ QR નથી.", fl_NOT_ON_ROUTE:"આ જગ્યા આ રાઉન્ડમાં સામેલ નથી.", fl_DUPLICATE:"આ જગ્યા આ રાઉન્ડમાં પહેલેથી થઈ ગઈ છે.", fl_NO_MEDIA:"ફોટો/વીડિયો અપલોડ થયો નથી. ફરી સ્કેન કરો.", fl_EXPIRED:"ખૂબ મોડું થયું. ફરી સ્કેન કરો.", fl_OUT_OF_ZONE:"તમે આ જગ્યાથી દૂર લાગો છો (GPS)", fl_NO_GPS:"GPS બંધ હતું", fl_TOO_FAST:"પાછલી જગ્યા પછી ખૂબ જલ્દી", fl_OTHER_PHONE:"બીજા ફોનનો ઉપયોગ થયો", fl_LATE:"રાઉન્ડના સમય પછી", fl_LOW_GPS:"નબળું GPS", fl_OUT_OF_ORDER:"રૂટના ક્રમમાં નથી", needVideo:"આ જગ્યા માટે વીડિયો જરૂરી છે", guardTab:"ગાર્ડ", committeeTab:"કમિટી", email:"ઈમેલ", password:"પાસવર્ડ", sub:"ગાર્ડ પેટ્રોલ", code:"ગાર્ડ કોડ", pin:"6 અંકનો પિન", login:"લૉગ ઇન", logout:"લૉગ આઉટ",
-        server:"સર્વર સમય (ભારત)", phoneWarn:"આ ફોન તમારા નામે રજિસ્ટર નથી. તમારા સ્કેન તપાસ માટે ચિહ્નિત થશે. કમિટી પાસે ફોન રીસેટ કરાવો.",
-        none:"અત્યારે કોઈ રાઉન્ડ નથી.", open:"રાઉન્ડ ચાલુ", soon:"શરૂ", done:"પૂર્ણ", until:"પૂરું કરો",
-        scan:"આગળનો ચેકપોઇન્ટ સ્કેન કરો", allDone:"બધા ચેકપોઇન્ટ પૂર્ણ ✓", point:"કેમેરા ચેકપોઇન્ટના QR પર રાખો",
-        keep:"QR બતાવતા રહો, પછી ધીમે ધીમે આજુબાજુની જગ્યા બતાવો", photo:"ફોટો લેવાયો", up:"અપલોડ થઈ રહ્યું છે…",
-        check:"તપાસ થઈ રહી છે…", ok:"નોંધાઈ ગયું", review:"નોંધાયું — કમિટી તપાસ કરશે", bad:"સ્વીકાર્યું નથી",
-        back:"પાછા", cancel:"રદ કરો", left:"બાકી", gpsOff:"GPS બંધ છે — લોકેશન ચાલુ કરો",
-        camErr:"કેમેરા ઉપલબ્ધ નથી. આ સાઇટને કેમેરાની પરવાનગી આપો.", notOurs:"આ પેટ્રોલ QR નથી",
-        video:"વીડિયો", photoM:"ફોટો", wrongLogin:"ખોટો ગાર્ડ કોડ અથવા પિન", progress:"પૂર્ણ" },
-};
-let lang = localStorage.getItem("ssp_lang") || "en";
-const t = (k) => (T[lang] && T[lang][k]) || T.en[k];
-const { sb, esc, fmtDate, fmtTime, fmtDateTime, toast } = SSP;
-const app = document.getElementById("app");
-const L = (obj, f) => SSP_I18N.pick(obj, f, lang);
-const LN = (txt) => SSP_I18N.localize(txt, lang);
-const flagText = (f) => (T[lang] && T[lang]["fl_" + f]) || T.en["fl_" + f] || f;
-
-// A random id stored on this phone; the server locks each guard to one phone
-let deviceId = localStorage.getItem("ssp_device_id");
-if (!deviceId) { deviceId = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()); localStorage.setItem("ssp_device_id", deviceId); }
-
-let home = null, user = null, clockTimer = null, refreshTimer = null;
-
-// ---------------- GPS (kept warm while app is open) ----------------
-let gps = null, gpsDenied = false, gpsWatch = null;
-function startGps() {
-  if (gpsWatch !== null || !navigator.geolocation) return;
-  gpsWatch = navigator.geolocation.watchPosition(
-    (p) => { gps = { lat:p.coords.latitude, lng:p.coords.longitude, acc:p.coords.accuracy, at:Date.now() }; gpsDenied = false; },
-    (e) => { if (e.code === 1) gpsDenied = true; },
-    { enableHighAccuracy:true, maximumAge:0, timeout:30000 });
-}
-const freshGps = () => (gps && Date.now() - gps.at < 60000 ? gps : null);
-
-// ---------------- Screens ----------------
-function langBar() {
-  return `<span class="langs">${[["en","EN"],["hi","हिं"],["gu","ગુ"]].map(([k,l]) =>
-    `<button class="${k===lang?"on":""}" onclick="setLang('${k}')">${l}</button>`).join("")}</span>`;
-}
-function setLang(k) { lang = k; localStorage.setItem("ssp_lang", k); home ? renderHome() : renderLogin(); }
-
-let loginMode = location.hash === "#committee" ? "committee" : "guard";
-let guardList = null;
-async function loadGuardList() {
-  try { const { data, error } = await sb.rpc("guard_login_list"); guardList = error ? [] : (data || []); } catch (e) { guardList = []; }
-}
-function renderLogin(msg) {
-  const g = loginMode === "guard";
-  if (g && guardList === null) { loadGuardList().then(() => renderLogin(msg)); }
-  const last = localStorage.getItem("ssp_last_guard") || "";
-  const guardField = guardList && guardList.length
-    ? `<select id="code" class="sel"><option value="">— ${t("pickGuard")} —</option>${guardList.map((x) =>
-        `<option value="${esc(x.code)}" ${x.code === last ? "selected" : ""}>${esc(x.code)} · ${esc(LN(x.name))}</option>`).join("")}</select>`
-    : `<input id="code" autocapitalize="characters" autocomplete="username" placeholder="G01" value="${esc(last)}">`;
-  app.innerHTML = `
-    <header><div class="brand">Serenity Space<small>${t("sub")}</small></div>${langBar()}</header>
-    <div class="seg"><button class="${g ? "on" : ""}" onclick="loginMode='guard';history.replaceState(null,'',location.pathname);renderLogin()">🛡️ ${t("guardTab")}</button>
-      <button class="${g ? "" : "on"}" onclick="loginMode='committee';renderLogin()">🏢 ${t("committeeTab")}</button></div>
-    <div class="card">
-      ${g ? `<label>${t("pickGuard")}</label>${guardField}
-             <label>${t("pin")}</label><input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="••••••">`
-          : `<label>${t("email")}</label><input id="code" type="email" autocomplete="username" style="letter-spacing:0;font-size:17px">
-             <label>${t("password")}</label><input id="pin" type="password" autocomplete="current-password" style="letter-spacing:0;font-size:17px">`}
-      <button class="btn" id="go">${t("login")}</button>
-      ${msg ? `<p style="color:#fca5a5;text-align:center">${esc(msg)}</p>` : ""}
-    </div>
-    <div class="foot">Serenity Space Co-operative Housing Society</div>`;
-  document.getElementById("go").onclick = async () => {
-    const id = document.getElementById("code").value.trim(), pw = document.getElementById("pin").value;
-    if (!id || !pw) return;
-    const email = g ? SSP.guardEmail(id) : id;
-    const { error } = await sb.auth.signInWithPassword({ email, password: g ? pw.trim() : pw });
-    if (error) return renderLogin(g ? t("wrongLogin") : error.message);
-    if (g) localStorage.setItem("ssp_last_guard", id);
-    boot();
-  };
-}
-
-async function loadHome() {
-  const { data, error } = await sb.rpc("guard_home", { p_device_id: deviceId });
-  if (error) { toast(error.message, "err"); if (/not a guard|inactive/i.test(error.message)) { await sb.auth.signOut(); renderLogin(error.message); } return; }
-  home = data; SSP.syncServer(data.server_now); renderHome();
-}
-
-function renderHome() {
-  const now = SSP.serverNow();
-  const rounds = (home.rounds || []).map((r) => {
-    const done = r.checkpoints ? r.checkpoints.filter((c) => c.done).length : 0;
-    const total = r.checkpoints ? r.checkpoints.length : 0;
-    const complete = total > 0 && done >= total;
-    const chip = complete ? `<span class="chip done">${t("done")}</span>`
-      : r.open_now ? `<span class="chip open">${t("open")}</span>`
-      : `<span class="chip soon">${t("soon")} ${fmtTime(r.due_start)}</span>`;
-    return `<div class="card ${r.open_now && !complete ? "open" : ""}">
-      <div class="row"><div><div class="route">${esc(lang === "en" ? r.route_name : (r["route_name_" + lang] || LN(r.route_name)))}</div>
-        <div class="win">${fmtTime(r.due_start)} – ${fmtTime(r.due_end)} · ${t("until")} ${fmtTime(r.due_end)}</div></div>${chip}</div>
-      <div class="bar"><i style="width:${total ? (100*done/total) : 0}%"></i></div>
-      <div class="win">${done} / ${total} ${t("progress")}</div>
-      <ol>${(r.checkpoints || []).map((c) => `<li class="${c.done ? "ok" : ""}"><span class="n">${c.done ? "✓" : c.seq}</span>
-        <span>${esc(L(c, "name"))}${c.media === "video" ? " 🎥" : ""}${c.area ? `<br><span class="a">${esc(L(c, "area"))}</span>` : ""}</span></li>`).join("")}</ol>
-      ${r.open_now && !complete ? `<button class="btn" onclick="startScan('${r.id}')">📷 ${t("scan")}</button>`
-        : complete ? `<p style="color:var(--green);text-align:center;font-weight:700">${t("allDone")}</p>` : ""}
-    </div>`;
-  }).join("");
-  app.innerHTML = `
-    <header><div class="brand">${esc(LN(home.guard.name))} · ${esc(home.guard.code)}<small>Serenity Space · ${t("sub")}</small></div>${langBar()}</header>
-    <div class="clock"><div class="t" id="clk">${fmtTime(now, true)}</div><div class="d" id="clkd">${t("server")} · ${fmtDate(now)}</div></div>
-    ${home.device_ok ? "" : `<div class="warn">⚠️ ${t("phoneWarn")}</div>`}
-    ${gpsDenied ? `<div class="warn">📍 ${t("gpsOff")}</div>` : ""}
-    ${rounds || `<div class="empty">${t("none")}</div>`}
-    <div class="foot"><button class="link" onclick="logout()">${t("logout")}</button></div>`;
-}
-
-async function logout() { await sb.auth.signOut(); home = null; renderLogin(); }
-
-// ---------------- Scanner ----------------
-const scanEl = document.getElementById("scan"), vid = document.getElementById("vid"), cv = document.getElementById("cv");
-const ctx = cv.getContext("2d");
-const qrCv = document.createElement("canvas"), qrCtx = qrCv.getContext("2d", { willReadFrequently:true });
-let S = null; // current scan state
-
-async function startScan(roundId) {
-  startGps();
-  const round = home.rounds.find((r) => r.id === roundId);
-  const { data: ch, error } = await sb.rpc("start_scan", { p_round_id: roundId });
-  if (error) return toast(error.message, "err");
-  SSP.syncServer(ch.server_now);
-  const done = round.checkpoints.filter((c) => c.done).length;
-  S = { ch, round, phase:"seek", qr:null, qrFrames:0, stopped:false, label:`${done + 1}/${round.checkpoints.length}` };
-  scanEl.style.display = "block"; scanEl.className = "";
-  document.getElementById("hint").textContent = t("point");
-  document.getElementById("cancelScan").textContent = t("cancel");
-  document.getElementById("mode").textContent = ch.media_type === "video" ? `🎥 ${t("video")} ${ch.video_seconds}s` : `📸 ${t("photoM")}`;
-  try { S.wake = await navigator.wakeLock?.request("screen"); } catch (e) {}
-  try {
-    S.stream = await navigator.mediaDevices.getUserMedia({ audio:false,
-      video:{ facingMode:{ ideal:"environment" }, width:{ ideal:1280 }, height:{ ideal:720 } } });
-  } catch (e) { stopScan(); return toast(t("camErr"), "err"); }
-  vid.srcObject = S.stream; await vid.play();
-  const W = 720; cv.width = W; cv.height = Math.round(W * (vid.videoHeight || 1280) / (vid.videoWidth || 720));
-  S.detector = ("BarcodeDetector" in window) ? new BarcodeDetector({ formats:["qr_code"] }) : null;
-  drawLoop(); detectLoop();
-}
-
-// Every frame is redrawn with the server time + one-time code burned in.
-function drawLoop() {
-  if (!S || S.stopped) return;
-  const w = cv.width, h = cv.height;
-  ctx.drawImage(vid, 0, 0, w, h);
-  const now = SSP.serverNow(), g = freshGps();
-  ctx.fillStyle = "rgba(0,0,0,.62)"; ctx.fillRect(0, 0, w, 96); ctx.fillRect(0, h - 44, w, 44);
-  ctx.fillStyle = "#fff"; ctx.font = "bold 22px system-ui, sans-serif";
-  ctx.fillText("SERENITY SPACE · PATROL", 14, 30);
-  ctx.font = "bold 26px ui-monospace, monospace";
-  ctx.fillText(fmtDateTime(now) + " IST", 14, 62);
-  ctx.font = "bold 20px system-ui, sans-serif"; ctx.fillStyle = "#fde047";
-  ctx.fillText(`CODE ${S.ch.code}  ·  ${S.ch.guard_code}  ·  ${S.label}`, 14, 88);
-  ctx.fillStyle = "#fff"; ctx.font = "18px system-ui, sans-serif";
-  ctx.fillText(g ? `GPS ±${Math.round(g.acc)} m` : "GPS …", 14, h - 15);
-  if (S.qr) { ctx.fillStyle = "#4ade80"; ctx.fillText("QR ✓", w - 200, h - 15); }
-  if (S.phase === "rec") { ctx.fillStyle = "#f87171"; ctx.fillText(`● REC ${Math.max(0, Math.ceil((S.recEnd - Date.now()) / 1000))}s`, w - 120, h - 15); }
-  // countdown
-  const left = Math.max(0, Math.round((new Date(S.ch.expires_at) - now) / 1000));
-  document.getElementById("timer").textContent = `⏱ ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")} ${t("left")}`;
-  requestAnimationFrame(drawLoop);
-}
-
-async function readQr() {
-  if (S.detector) {
-    try { const r = await S.detector.detect(vid); return r[0]?.rawValue || null; } catch (e) { S.detector = null; }
-  }
-  const sw = 480, shh = Math.round(sw * vid.videoHeight / vid.videoWidth) || 640;
-  qrCv.width = sw; qrCv.height = shh; qrCtx.drawImage(vid, 0, 0, sw, shh);
-  const img = qrCtx.getImageData(0, 0, sw, shh);
-  return jsQR(img.data, sw, shh, { inversionAttempts:"dontInvert" })?.data || null;
-}
-
-async function detectLoop() {
-  while (S && !S.stopped && (S.phase === "seek" || S.phase === "rec")) {
-    const val = await readQr().catch(() => null);
-    if (!S || S.stopped) return;
-    if (val) {
-      if (!val.startsWith("SSP1:")) { if (S.phase === "seek") document.getElementById("hint").textContent = "⚠️ " + t("notOurs"); }
-      else {
-        if (S.phase === "rec" && val === S.qr) S.qrFrames++;
-        if (S.phase === "seek") {
-          S.qr = val; S.qrFrames = 1; navigator.vibrate?.(80); S.phase = "identify";
-          try {
-            const { data: idr } = await sb.rpc("identify_qr", { p_challenge_id: S.ch.challenge_id, p_qr: val });
-            if (idr && idr.media_type && idr.media_type !== S.ch.media_type) {
-              S.ch.media_type = idr.media_type;
-              document.getElementById("mode").textContent = S.ch.media_type === "video" ? `🎥 ${t("video")} ${S.ch.video_seconds}s` : `📸 ${t("photoM")}`;
-              if (S.ch.media_type === "video") toast(t("needVideo"));
-            }
-          } catch (e) {}
-          if (!S || S.stopped) return;
-          if (S.ch.media_type === "video") startRecording(); else { S.phase = "photo"; setTimeout(takePhoto, 350); }
-        }
-      }
-    }
-    await new Promise((r) => setTimeout(r, 180));
-  }
-}
-
-function takePhoto() {
-  document.getElementById("hint").textContent = t("photo");
-  cv.toBlob((b) => finish(b, "jpg", "image/jpeg"), "image/jpeg", 0.75);
-}
-
-function startRecording() {
-  S.phase = "rec"; scanEl.className = "rec";
-  document.getElementById("hint").textContent = t("keep");
-  const types = ["video/webm;codecs=vp8", "video/webm", "video/mp4;codecs=avc1", "video/mp4"];
-  const mime = types.find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
-  const rec = new MediaRecorder(cv.captureStream(15), mime ? { mimeType:mime, videoBitsPerSecond:600000 } : {});
-  const chunks = []; rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-  rec.onstop = () => {
-    const type = (rec.mimeType || mime || "video/webm").split(";")[0];
-    finish(new Blob(chunks, { type }), type === "video/mp4" ? "mp4" : "webm", type);
-  };
-  S.recEnd = Date.now() + S.ch.video_seconds * 1000;
-  rec.start(1000);
-  setTimeout(() => rec.state !== "inactive" && rec.stop(), S.ch.video_seconds * 1000);
-}
-
-function stopScan() {
-  if (!S) return;
-  S.stopped = true;
-  S.stream?.getTracks().forEach((tr) => tr.stop());
-  try { S.wake?.release(); } catch (e) {}
-  scanEl.style.display = "none";
-}
-
-async function finish(blob, ext, type) {
-  const st = S; stopScan();
-  showResult("⏳", t("up"), "", "wait");
-  const { data: { user } } = await sb.auth.getUser();
-  const path = `${user.id}/${st.ch.challenge_id}.${ext}`;
-  let upErr = null;
-  for (let i = 0; i < 3; i++) {
-    const { error } = await sb.storage.from("patrol-media").upload(path, blob, { contentType:type, upsert:false });
-    upErr = error; if (!error || /exists/i.test(error.message)) { upErr = null; break; }
-    await new Promise((r) => setTimeout(r, 1500));
-  }
-  showResult("⏳", t("check"), "", "wait");
-  const g = freshGps();
-  const { data, error } = await sb.rpc("submit_scan", {
-    p_challenge_id: st.ch.challenge_id, p_qr: st.qr, p_lat: g?.lat ?? null, p_lng: g?.lng ?? null,
-    p_accuracy: g?.acc ?? null, p_device_id: deviceId, p_media_path: upErr ? null : path,
-    p_qr_frames: st.qrFrames, p_user_agent: navigator.userAgent });
-  if (error) return showResult("❌", t("bad"), error.message, "bad");
-  SSP.syncServer(data.server_time);
-  navigator.vibrate?.(data.status === "rejected" ? [200, 100, 200] : 150);
-  const cpObj = (st.round.checkpoints || []).find((c) => c.name === data.checkpoint);
-  const cpName = esc(cpObj ? L(cpObj, "name") : LN(data.checkpoint || ""));
-  const hard = ["OLD_QR","UNKNOWN_QR","NOT_ON_ROUTE","DUPLICATE","NO_MEDIA","EXPIRED"];
-  if (data.status === "ok") showResult("✅", t("ok"), `${cpName} · ${fmtTime(data.server_time, true)} · ${data.done}/${data.total}`, "ok");
-  else if (data.status === "review") showResult("🟡", t("review"), `${cpName} · ${fmtTime(data.server_time, true)}<br>${data.flags.filter((f) => f !== "OUT_OF_ORDER").map(flagText).join(", ")}`, "review");
-  else showResult("❌", t("bad"), esc(flagText(data.flags.find((f) => hard.includes(f)) || "") || data.message), "bad");
-  loadHome();
-}
-
-function showResult(icon, title, sub, kind) {
-  const el = document.getElementById("result");
-  el.style.display = "block";
-  el.innerHTML = `<div class="big">${icon}</div><h2>${esc(title)}</h2><p>${sub}</p>
-    ${kind === "wait" ? "" : `<button class="btn" onclick="document.getElementById('result').style.display='none'">${t("back")}</button>`}`;
-}
-
-document.getElementById("cancelScan").onclick = () => { stopScan(); };
-
-// ---------------- Start ----------------
-async function boot() {
-  if (!sb) { app.innerHTML = `<div class="empty">Setup pending: Supabase keys are not configured in config.js.</div>`; return; }
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) return renderLogin();
-  const adm = await sb.rpc("is_admin");
-  if (adm.data === true) return location.replace("admin.html");
-  startGps();
-  await loadHome();
-  clearInterval(clockTimer); clockTimer = setInterval(() => {
-    const c = document.getElementById("clk"); if (c) c.textContent = fmtTime(SSP.serverNow(), true);
-  }, 1000);
-  clearInterval(refreshTimer); refreshTimer = setInterval(() => { if (!S || S.stopped) loadHome(); }, 60000);
-}
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
-boot();
-</script>
+<script src="guard.js"></script>
 </body>
 </html>

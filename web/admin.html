@@ -83,6 +83,8 @@ const q = async (p) => { const { data, error } = await p; if (error) { toast(err
 const flagHtml = (fl) => (fl || []).map((f) => `<span class="flag ${["OLD_QR","UNKNOWN_QR"].includes(f) ? "f" : ""}" title="${esc(FLAG_TEXT[f] || f)}">${esc(FLAG_TEXT[f] || f)}</span>`).join("");
 const STATUS_TEXT = { completed:"Completed", partial:"Partly done", missed:"Missed", in_progress:"In progress", due:"Due now", upcoming:"Upcoming",
                       ok:"OK", review:"Check", rejected:"Rejected" };
+const REASON_TEXT = { TORN: "🩹 QR torn / missing", DIRTY: "🌫️ QR dirty / faded", DARK: "🌙 Too dark", CAMERA: "📵 Camera problem", OTHER: "❓ Other" };
+const reasonHtml = (s) => s.reason ? `<div style="margin-top:4px;font-size:12px"><b>${REASON_TEXT[s.reason] || esc(s.reason)}</b>${s.note ? ` – “${esc(s.note)}”` : ""}</div>` : "";
 const chip = (s) => `<span class="chip ${s}">${STATUS_TEXT[s] || s}</span>`;
 
 // ---------------- Auth ----------------
@@ -190,7 +192,7 @@ async function roundDetail(id) {
     const s = scans.find((x) => x.checkpoint_id === rc.checkpoints.id && x.status !== "rejected");
     return `<tr><td>${rc.seq}</td><td>${esc(rc.checkpoints.name)}<br><span class="muted">${esc(rc.checkpoints.area || "")}</span></td>
       <td>${s ? `<b>${fmtTime(s.scanned_at, true)}</b>` : `<span class="chip missed">Not scanned</span>`}</td>
-      <td>${s ? chip(s.status) + " " + flagHtml(s.flags) : ""}</td>
+      <td>${s ? chip(s.status) + " " + flagHtml(s.flags) + reasonHtml(s) : ""}</td>
       <td>${s?.distance_m != null ? Math.round(s.distance_m) + " m" : ""}</td>
       <td>${s ? mediaBtn(s) : ""}</td></tr>`;
   }).join("");
@@ -215,6 +217,7 @@ async function viewMedia(scanId) {
   const el = modal(`<h2>${esc(s.checkpoints?.name || "Unknown QR")} · ${fmtDateTime(s.scanned_at)}</h2>
     ${s.media_type === "video" ? `<video class="media" src="${data.signedUrl}" controls autoplay playsinline></video>` : `<img class="media" src="${data.signedUrl}">`}
     <div class="card" style="margin-top:12px">
+      ${s.reason ? `<div style="background:var(--abg);padding:10px;border-radius:8px;margin-bottom:8px"><b>Guard could not scan the QR.</b> Reason: ${REASON_TEXT[s.reason] || esc(s.reason)}${s.note ? `<br>Guard said: “${esc(s.note)}”` : ""}<br><span class="muted">Check the video shows the right place. If the QR is damaged, print a new one (Checkpoints → 🖨 QR).</span></div>` : ""}
       <b>Verify:</b> the code burned on the ${s.media_type} must read <b style="font-size:18px;color:var(--brand)">${esc(s.challenges?.code || "?")}</b>
       and the QR must be on a wall/post — not on a phone screen or paper in the hand.
       <div class="muted" style="margin-top:6px">Guard ${esc(s.guards?.code)} · ${esc(s.guards?.name)} · ${chip(s.status)} ${flagHtml(s.flags)}<br>
@@ -241,7 +244,7 @@ VIEWS.review = async (m) => {
     <p class="help">Open the photo/video, confirm the burned-in code matches and the QR is on the wall at the right place, then mark it. Red items are attempts with an old or fake QR — strong sign of cheating.</p>
     ${rows.length ? `<table><tr><th>Server time</th><th>Guard</th><th>Checkpoint</th><th>Status</th><th>Why</th><th>Proof</th></tr>
     ${rows.map((s) => `<tr><td>${fmtDate(s.scanned_at)} <b>${fmtTime(s.scanned_at, true)}</b></td><td>${esc(s.guards?.code)} · ${esc(s.guards?.name)}</td>
-      <td>${esc(s.checkpoints?.name || "–")}</td><td>${chip(s.status)}</td><td>${flagHtml(s.flags)}</td><td>${mediaBtn(s)}
+      <td>${esc(s.checkpoints?.name || "–")}</td><td>${chip(s.status)}</td><td>${flagHtml(s.flags)}${reasonHtml(s)}</td><td>${mediaBtn(s)}
       ${!s.media_path ? `<button class="btn s xs" onclick="quickReview('${s.id}')">Mark seen</button>` : ""}</td></tr>`).join("")}</table>`
     : `<div class="empty">Nothing to check. 👍</div>`}</div>`;
 };
@@ -515,7 +518,7 @@ VIEWS.reports = async (m, from0, to0) => {
   const byGuard = guards.map((g) => {
     const s = scans.filter((x) => x.guard_id === g.id);
     return { g, ok: s.filter((x) => x.status === "ok").length, review: s.filter((x) => x.status === "review").length,
-      rej: s.filter((x) => x.status === "rejected").length, fraud: s.filter((x) => (x.flags || []).some((f) => ["OLD_QR","UNKNOWN_QR","OUT_OF_ZONE"].includes(f))).length,
+      rej: s.filter((x) => x.status === "rejected").length, fraud: s.filter((x) => (x.flags || []).some((f) => ["OLD_QR","UNKNOWN_QR","OUT_OF_ZONE"].includes(f))).length, noqr: s.filter((x) => (x.flags || []).includes("NO_QR")).length,
       rounds: new Set(rounds.filter((r) => r.started_by === g.id).map((r) => r.id)).size };
   }).filter((x) => x.ok + x.review + x.rej > 0 || x.g.active);
   const days = [...new Set(rounds.map((r) => r.round_date))];
@@ -527,10 +530,10 @@ VIEWS.reports = async (m, from0, to0) => {
       <div class="kpi kg"><div class="v">${c("completed")}</div><div class="l">Completed</div></div><div class="kpi ka"><div class="v">${c("partial")}</div><div class="l">Partly done</div></div>
       <div class="kpi kr"><div class="v">${c("missed")}</div><div class="l">Missed</div></div>
       <div class="kpi ${pct >= 90 ? "kg" : pct >= 70 ? "ka" : "kr"}"><div class="v">${pct}%</div><div class="l">Completion</div></div></div>
-    <div class="grid2"><div class="card"><h3>By guard</h3><table><tr><th>Guard</th><th class="r">Rounds</th><th class="r">OK scans</th><th class="r">To check</th><th class="r">Rejected</th><th class="r">Warning signs</th></tr>
-      ${byGuard.map((x) => `<tr><td>${esc(x.g.code)} · ${esc(x.g.name)}</td><td class="r">${x.rounds}</td><td class="r">${x.ok}</td><td class="r">${x.review}</td><td class="r">${x.rej}</td>
+    <div class="grid2"><div class="card"><h3>By guard</h3><table><tr><th>Guard</th><th class="r">Rounds</th><th class="r">OK scans</th><th class="r">To check</th><th class="r">Rejected</th><th class="r">No-QR</th><th class="r">Warning signs</th></tr>
+      ${byGuard.map((x) => `<tr><td>${esc(x.g.code)} · ${esc(x.g.name)}</td><td class="r">${x.rounds}</td><td class="r">${x.ok}</td><td class="r">${x.review}</td><td class="r">${x.rej}</td><td class="r">${x.noqr ? `<span class="chip review">${x.noqr}</span>` : 0}</td>
         <td class="r">${x.fraud ? `<span class="chip fraud">${x.fraud}</span>` : "0"}</td></tr>`).join("")}</table>
-      <p class="help" style="margin-top:8px">Warning signs = old/fake QR, or scanned away from the checkpoint.</p></div>
+      <p class="help" style="margin-top:8px">No-QR = guard used "QR not working" (video + reason). Many of these from one guard is worth a look. Warning signs = old/fake QR, or scanned away from the checkpoint.</p></div>
     <div class="card"><h3>By day</h3><table><tr><th>Date</th><th class="r">Rounds</th><th class="r">Completed</th><th class="r">Partly</th><th class="r">Missed</th></tr>
       ${days.map((d) => { const rr = rounds.filter((r) => r.round_date === d); const k = (s) => rr.filter((r) => r.status === s).length;
         return `<tr><td>${fmtDate(d + "T12:00:00+05:30")}</td><td class="r">${rr.length}</td><td class="r">${k("completed")}</td><td class="r">${k("partial")}</td><td class="r">${k("missed") ? `<b style="color:var(--red)">${k("missed")}</b>` : 0}</td></tr>`; }).join("")}</table></div></div>`;
