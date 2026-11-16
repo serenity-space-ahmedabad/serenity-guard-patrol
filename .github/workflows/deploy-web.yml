@@ -1,4 +1,5 @@
 name: Deploy website
+# Publishes web/ to GitHub Pages
 on:
   workflow_dispatch:
   push:
