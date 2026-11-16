@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["web/**"]
+    paths: ["web/**", ".github/workflows/deploy-web.yml"]
 permissions: { contents: read, pages: write, id-token: write }
 concurrency: { group: pages, cancel-in-progress: true }
 jobs:
@@ -11,10 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Write config
-        run: |
-          DOMAIN="${{ vars.GUARD_EMAIL_DOMAIN }}"; DOMAIN="${DOMAIN:-guards.serenityspace.in}"
-          sed -i "s#__SUPABASE_URL__#${{ vars.SUPABASE_URL }}#; s#__SUPABASE_ANON_KEY__#${{ vars.SUPABASE_ANON_KEY }}#; s#__GUARD_EMAIL_DOMAIN__#$DOMAIN#" web/config.js
+      - uses: actions/configure-pages@v5
+        with: { enablement: true }
       - uses: actions/upload-pages-artifact@v3
         with: { path: web }
   deploy:

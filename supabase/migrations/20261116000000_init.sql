@@ -3,7 +3,7 @@
 -- All times are recorded by the SERVER (now()). Phone clocks are ignored.
 -- =====================================================================
 
-create extension if not exists pgcrypto;
+create extension if not exists pgcrypto with schema extensions;
 
 -- ---------------------------------------------------------------------
 -- Settings
@@ -86,7 +86,7 @@ create table public.checkpoints (
   lng          double precision,
   radius_m     integer not null default 30,
   gps_required boolean not null default true,     -- switch off for basements / indoor spots
-  qr_token     text not null unique default encode(gen_random_bytes(12), 'hex'),
+  qr_token     text not null unique default encode(extensions.gen_random_bytes(12), 'hex'),
   qr_version   integer not null default 1,
   active       boolean not null default true,
   created_at   timestamptz not null default now()
@@ -529,7 +529,7 @@ begin
   insert into public.checkpoint_old_tokens (token, checkpoint_id, version)
     select qr_token, id, qr_version from public.checkpoints where id = p_id;
   update public.checkpoints
-     set qr_token = encode(gen_random_bytes(12), 'hex'), qr_version = qr_version + 1
+     set qr_token = encode(extensions.gen_random_bytes(12), 'hex'), qr_version = qr_version + 1
    where id = p_id;
 end $$;
 

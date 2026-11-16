@@ -1,9 +1,7 @@
 name: Deploy Supabase
+# Manual only. Day-to-day, database changes are applied by Claude through the Supabase connection.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ["supabase/**"]
 jobs:
   deploy:
     runs-on: ubuntu-latest
