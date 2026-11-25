@@ -20,6 +20,16 @@ const TXT: Record<string, Record<string, (p: string, t: string) => [string, stri
     hi: (p, t) => ["⏰ राउंड बाकी है", `${t} तक पूरा करें। अगली जगह: ${p}`],
     gu: (p, t) => ["⏰ રાઉન્ડ બાકી છે", `${t} સુધી પૂરું કરો. આગળની જગ્યા: ${p}`],
   },
+  solar: {
+    en: (p) => ["☀️ Solar meter reading", `Time for the evening solar reading. ${p} blocks left.`],
+    hi: (p) => ["☀️ सोलर मीटर रीडिंग", `शाम की सोलर रीडिंग का समय। ${p} ब्लॉक बाकी।`],
+    gu: (p) => ["☀️ સોલર મીટર રીડિંગ", `સાંજના સોલર રીડિંગનો સમય. ${p} બ્લોક બાકી.`],
+  },
+  solar_remind: {
+    en: (p, t) => ["⏰ Solar reading pending", `${p} blocks still left. Finish by ${t}.`],
+    hi: (p, t) => ["⏰ सोलर रीडिंग बाकी", `अभी ${p} ब्लॉक बाकी हैं। ${t} तक पूरा करें।`],
+    gu: (p, t) => ["⏰ સોલર રીડિંગ બાકી", `હજી ${p} બ્લોક બાકી છે. ${t} સુધી પૂરું કરો.`],
+  },
   test: {
     en: () => ["🔔 Alerts are on", "You will get a ring when a round starts."],
     hi: () => ["🔔 अलर्ट चालू हैं", "राउंड शुरू होने पर घंटी बजेगी।"],
@@ -48,8 +58,16 @@ Deno.serve(async (req) => {
     let guardIds: string[] = [];
     let place: Record<string, unknown> | null = null;
     let dueEnd = "";
+    let solarLeft = "";
+    const isSolar = body.kind === "solar" || body.kind === "solar_remind";
     if (testGuard) {
       guardIds = [testGuard];
+    } else if (isSolar) {
+      // evening solar reading: alert every active guard
+      solarLeft = String(Math.max(0, Number(body.total ?? 9) - Number(body.done ?? 0)));
+      const { data: we } = await sb.from("app_settings").select("value").eq("key", "solar_window_end").maybeSingle();
+      dueEnd = we?.value ?? "";
+      guardIds = ((await sb.from("guards").select("id").eq("active", true)).data ?? []).map((g) => g.id);
     } else {
       const { data: r } = await sb.from("rounds").select("id, route_id, due_end, assigned_guard").eq("id", body.round_id).single();
       if (!r) return json({ error: "round not found" }, 404);
@@ -70,8 +88,9 @@ Deno.serve(async (req) => {
     for (const s of subs ?? []) {
       const lang = ["en", "hi", "gu"].includes(s.lang) ? s.lang : "en";
       const kind = TXT[body.kind] ? body.kind : "start";
-      const [title, text] = TXT[kind][lang](place ? pick(place, "name", lang) : "", dueEnd ? hhmm(dueEnd) : "");
-      const payload = JSON.stringify({ title, body: text, tag: `round-${body.round_id ?? "test"}`, url: "./" });
+      const [title, text] = isSolar ? TXT[kind][lang](solarLeft, dueEnd)
+        : TXT[kind][lang](place ? pick(place, "name", lang) : "", dueEnd ? hhmm(dueEnd) : "");
+      const payload = JSON.stringify({ title, body: text, tag: isSolar ? `solar-${kind}` : `round-${body.round_id ?? "test"}`, url: "./" });
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload,
           { TTL: 1800, urgency: "high" });

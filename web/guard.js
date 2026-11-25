@@ -260,9 +260,12 @@ async function logout() { window.speechSynthesis?.cancel(); await sb.auth.signOu
 async function loadHome() {
   const { data, error } = await sb.rpc("guard_home", { p_device_id: deviceId });
   if (error) { toast(error.message, "err"); if (/not a guard|inactive/i.test(error.message)) { await sb.auth.signOut(); home = null; renderLogin(error.message); } return; }
+  const prevSolar = home?.solar;
   home = data; SSP.syncServer(data.server_now);
+  const sol = await sb.rpc("solar_today").catch(() => ({}));
+  home.solar = sol && !sol.error ? sol.data : prevSolar;
   detectNewRounds();
-  if (!$("result").style.display || $("result").style.display === "none") renderHome();
+  if ((!$("result").style.display || $("result").style.display === "none") && $("solar").style.display !== "block") renderHome();
 }
 const isComplete = (r) => r.checkpoints && r.checkpoints.length && r.checkpoints.every((c) => c.done);
 const currentRound = () => (home?.rounds || []).find((r) => r.open_now && !isComplete(r));
@@ -314,7 +317,8 @@ function renderHome() {
     ${home.device_ok ? "" : `<div class="warn">⚠️ ${t("phoneWarn")}</div>`}
     ${gpsDenied ? `<div class="warn">📍 ${t("gpsOff")}</div>` : ""}
     ${alertsTile()}
-    ${main}`;
+    ${main}
+    ${typeof solarTile === "function" ? solarTile() : ""}`;
 }
 
 // New round opened since last check → ring, speak, banner, phone notification
@@ -421,7 +425,7 @@ function drawLoop() {
   const now = SSP.serverNow(), g = freshGps();
   ctx.fillStyle = "rgba(0,0,0,.62)"; ctx.fillRect(0, 0, w, 96); ctx.fillRect(0, h - 44, w, 44);
   ctx.fillStyle = "#fff"; ctx.font = "bold 22px system-ui, sans-serif";
-  ctx.fillText("SERENITY SPACE · PATROL", 14, 30);
+  ctx.fillText(S.mode === "solar" ? "SERENITY SPACE · SOLAR" : "SERENITY SPACE · PATROL", 14, 30);
   ctx.font = "bold 26px ui-monospace, monospace";
   ctx.fillText(fmtDateTime(now) + " IST", 14, 62);
   ctx.font = "bold 20px system-ui, sans-serif"; ctx.fillStyle = "#fde047";
@@ -431,6 +435,7 @@ function drawLoop() {
   if (S.mode === "manual") { ctx.fillStyle = "#fbbf24"; ctx.fillText(`NO QR · ${S.opts.cp?.name || ""} · ${S.opts.reason}`.slice(0, 48), 150, h - 15); }
   else if (S.qr) { ctx.fillStyle = "#4ade80"; ctx.fillText("QR ✓", w - 200, h - 15); }
   if (S.phase === "rec") { ctx.fillStyle = "#f87171"; ctx.fillText(`● REC ${Math.max(0, Math.ceil((S.recEnd - Date.now()) / 1000))}s`, w - 120, h - 15); }
+  if (S.mode === "solar") { requestAnimationFrame(drawLoop); return; }
   const left = Math.max(0, Math.round((new Date(S.ch.expires_at) - now) / 1000));
   $("timer").textContent = `⏱ ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")} ${t("left")}`;
   requestAnimationFrame(drawLoop);
@@ -556,7 +561,7 @@ function showResult({ ico, title, sub = "", next = null, round = null, retry = n
                <button class="btn amber" onclick="openNoQr('${retry}')">⚠️ ${t("qrProblem")}</button>` : ""}
     ${waiting ? "" : `<button class="btn ghost" onclick="hidePanels();renderHome()">🏠 ${t("home")}</button>`}`;
 }
-function hidePanels() { $("result").style.display = "none"; $("flow").style.display = "none"; }
+function hidePanels() { $("result").style.display = "none"; $("flow").style.display = "none"; $("solar").style.display = "none"; }
 
 // ====================== QR NOT WORKING ======================
 let NQ = null;
@@ -623,7 +628,14 @@ function noQrGo() {
 async function boot() {
   document.documentElement.lang = lang;
   if (!sb) { app.innerHTML = `<div class="foot">Setup pending: Supabase keys are not configured in config.js.</div>`; return; }
-  const { data: { session } } = await sb.auth.getSession();
+  let session = null;
+  for (let i = 0; i < 3 && !session; i++) {
+    session = (await sb.auth.getSession()).data.session;
+    if (session || !SSP.hadLogin()) break;
+    // Login is saved but could not be renewed (usually no internet) — wait and retry instead of asking for the PIN again
+    app.innerHTML = `<div class="status wait" style="margin-top:40px"><div class="ico">📶</div><h2>${lang === "gu" ? "ઇન્ટરનેટની રાહ જોઈ રહ્યા છીએ…" : lang === "en" ? "Waiting for internet…" : "इंटरनेट का इंतज़ार…"}</h2></div>`;
+    await new Promise((r) => setTimeout(r, 4000));
+  }
   if (!session) return renderLogin();
   const adm = await sb.rpc("is_admin");
   if (adm.data === true) return location.replace("admin.html");
@@ -631,8 +643,10 @@ async function boot() {
   await loadHome();
   saveSubscription(false);
   clearInterval(clockTimer); clockTimer = setInterval(() => { const c = $("clk"); if (c) c.textContent = fmtTime(SSP.serverNow(), true); }, 1000);
-  clearInterval(refreshTimer); refreshTimer = setInterval(() => { if ((!S || S.stopped) && $("flow").style.display !== "block") loadHome(); }, 30000);
+  clearInterval(refreshTimer); refreshTimer = setInterval(() => { if ((!S || S.stopped) && $("flow").style.display !== "block" && $("solar").style.display !== "block") loadHome(); }, 30000);
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden && home && (!S || S.stopped)) loadHome(); });
+window.addEventListener("online", () => { if (!home && SSP.hadLogin()) boot(); });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
-boot();
+// wait until every script (solar.js too) has loaded
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();

@@ -38,7 +38,10 @@
     ? cfg.GUARD_EMAIL_DOMAIN : "guards.serenityspace.in";
 
   const sb = (window.supabase && cfg.SUPABASE_URL && !cfg.SUPABASE_URL.startsWith("__"))
-    ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY)
+    ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, {
+        // Stay logged in on this phone: keep the session in the phone's storage and renew it automatically
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storage: window.localStorage },
+      })
     : null;
 
   const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -91,6 +94,14 @@
   };
   const FRAUD_FLAGS = ["OLD_QR", "UNKNOWN_QR", "OUT_OF_ZONE", "TOO_FAST", "OTHER_PHONE"];
 
-  window.SSP = { sb, domain, fmtDate, fmtTime, fmtDateTime, isoDateIST, syncServer, serverNow, esc, toast,
+  // Ask the phone not to clear this app's saved data (keeps the login), and renew the login when the app comes back to the screen
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+  if (sb) document.addEventListener("visibilitychange", () => {
+    try { document.hidden ? sb.auth.stopAutoRefresh() : sb.auth.startAutoRefresh(); } catch (e) {}
+  });
+  // Was someone logged in on this phone before? (used to avoid showing the login screen when only the internet is down)
+  const hadLogin = () => Object.keys(localStorage).some((k) => /^sb-.*-auth-token$/.test(k));
+
+  window.SSP = { hadLogin, sb, domain, fmtDate, fmtTime, fmtDateTime, isoDateIST, syncServer, serverNow, esc, toast,
                  FLAG_TEXT, FRAUD_FLAGS, guardEmail: (code) => `${code.trim().toLowerCase()}@${domain}` };
 })();

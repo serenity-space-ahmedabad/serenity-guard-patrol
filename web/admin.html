@@ -7,6 +7,9 @@
 <link rel="icon" href="icon.svg">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SS Patrol">
 <style>
   :root { --bg:#f8fafc; --card:#fff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b; --brand:#0369a1;
           --green:#15803d; --gbg:#dcfce7; --amber:#b45309; --abg:#fef3c7; --red:#b91c1c; --rbg:#fee2e2; --sbg:#f1f5f9; }
@@ -50,6 +53,8 @@
   .btn.xs { padding:4px 8px; font-size:12px; }
   .bar { height:7px; background:var(--sbg); border-radius:99px; overflow:hidden; min-width:80px; }
   .bar i { display:block; height:100%; background:var(--green); }
+  details.inact summary { cursor:pointer; font-weight:700; font-size:15px; list-style-position:inside; }
+  details.inact[open] summary .muted { display:none; }
   .rgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; }
   .rcard { background:#fff; border:2px solid var(--line); border-radius:14px; padding:16px; cursor:pointer; transition:.15s; }
   .rcard:hover { border-color:var(--brand); box-shadow:0 6px 18px rgba(3,105,161,.12); }
@@ -133,7 +138,7 @@ function renderLogin(msg) {
 async function logout() { await sb.auth.signOut(); location.replace("index.html"); }
 
 // ---------------- Shell ----------------
-const TABS = [["today","Today"],["review","Review"],["checkpoints","Checkpoints & QR"],["routes","Routes & times"],["guards","Guards"],["reports","Reports"],["settings","Settings"]];
+const TABS = [["today","Today"],["review","Review"],["checkpoints","Checkpoints & QR"],["routes","Routes & times"],["guards","Guards"],["reports","Reports"],["solar","☀️ Solar"],["settings","Settings"]];
 function shell() {
   root.innerHTML = `<header><b>Serenity Space · Guard Patrol</b><span class="sp"></span>
       <span class="clk" id="clk"></span><span class="muted" style="color:#94a3b8">${esc(me.email)}</span><button onclick="logout()">Log out</button></header>
@@ -445,11 +450,11 @@ function renderRouteList(m, allRoutes, allRc, allSch) {
     <p class="help">A route is <b>the places a guard walks to, in order</b>, at <b>fixed times</b> every day. Click a route to change its places or times.</p>
     ${active.length ? `<div class="rgrid">${active.map(card).join("")}</div>`
       : `<div class="card empty">No active routes yet.<br><br><button class="btn" onclick="openRoute('new')">＋ Create your first route</button></div>`}
-    ${inactive.length ? `<div class="card" style="background:#f8fafc;margin-top:18px"><h3>🗄️ Deactivated routes (${inactive.length})</h3>
-      <p class="help">These make no new rounds and do not appear on future days. Their past rounds stay in Reports.</p>
+    ${inactive.length ? `<details class="card inact" style="background:#f8fafc;margin-top:18px"><summary>🗄️ Deactivated routes (${inactive.length}) <span class="muted" style="font-weight:500">– tap to show</span></summary>
+      <p class="help" style="margin-top:10px">These make no new rounds and do not appear on future days. Their past rounds stay in Reports.</p>
       <table><tr><th>Route</th><th>Started</th><th>End date</th><th></th></tr>
       ${inactive.map((r) => `<tr><td><b>${esc(r.name)}</b></td><td>${fmtD(r.start_date)} ${hm(r.start_time)}</td><td>${fmtD(r.end_date)}</td>
-        <td class="r"><button class="btn s xs" onclick="toggleRoute('${r.id}', true)">Activate again</button></td></tr>`).join("")}</table></div>` : ""}`;
+        <td class="r"><button class="btn s xs" onclick="toggleRoute('${r.id}', true)">Activate again</button></td></tr>`).join("")}</table></details>` : ""}`;
 }
 
 // ---------- 2. New route (step 1 of 3) ----------
@@ -719,7 +724,8 @@ async function saveSetting(k) { await q(sb.from("app_settings").update({ value: 
 async function cleanup() { const r = await fn({ action:"cleanup_media" }); toast(`Deleted ${r.removed} file(s) older than ${r.older_than_days} days`); }
 async function addAdmin() { await fn({ action:"create_admin", name: an.value.trim(), email: ae.value.trim(), password: ap.value }); toast("Admin added"); an.value = ae.value = ap.value = ""; }
 
-boot();
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
 </script>
+<script src="admin-solar.js"></script>
 </body>
 </html>

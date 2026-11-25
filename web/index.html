@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SS Patrol">
 <title>Serenity Space · Patrol</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg">
@@ -114,6 +117,46 @@
   #toast { position:fixed; left:16px; right:16px; bottom:20px; background:#334155; color:#fff; padding:14px; border-radius:14px; font-size:17px;
     opacity:0; transform:translateY(20px); transition:.25s; z-index:50; text-align:center; pointer-events:none; }
   #toast.show { opacity:1; transform:none; } #toast.err { background:#7f1d1d; }
+
+  /* solar */
+  .solarTile { background:linear-gradient(160deg,#713f12,#a16207); border:3px solid #facc15; border-radius:22px; padding:16px; margin-bottom:12px; text-align:center; }
+  .solarTile.late { border-color:var(--red); }
+  .solarTile .lbl { font-size:22px; font-weight:900; }
+  .solarTile .cnt { font-size:18px; font-weight:700; margin-top:6px; }
+  .solarTile .lateMsg { color:#fecaca; font-weight:800; margin-top:6px; }
+  .solarBtn { background:#facc15; color:#422006; box-shadow:0 6px 0 #a16207; }
+  .sgrid { display:flex; justify-content:center; gap:4px; flex-wrap:wrap; margin-top:10px; }
+  .sb { width:28px; height:28px; font-size:14px; border-radius:50%; display:grid; place-items:center; font-weight:900; background:rgba(0,0,0,.3); border:2px solid #fde68a; }
+  .sb.ok { background:var(--green); color:#052e16; border-color:var(--green); }
+  .solarNote { background:var(--card); border-radius:16px; padding:14px; text-align:center; font-size:18px; font-weight:700; margin-bottom:12px; }
+  .solarNote.ok { background:#14532d; }
+  .shead { display:flex; align-items:center; gap:10px; margin:6px 0 14px; } .shead .mid { flex:0 0 auto; padding:12px 14px; }
+  .stitle { font-size:22px; font-weight:900; } .stitle small { display:block; font-size:15px; color:var(--muted); font-weight:700; }
+  .bgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .btile { border:3px solid #facc15; background:var(--card); color:var(--text); border-radius:20px; padding:14px 4px; min-height:110px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; }
+  .btile .bl { font-size:46px; font-weight:900; line-height:1; } .btile .bs { font-size:14px; font-weight:700; color:var(--muted); }
+  .btile.ok { background:#14532d; border-color:var(--green); } .btile.ok .bs { color:#bbf7d0; }
+  .btile.nr { background:#451a03; border-color:var(--amber); }
+  .bhead { display:flex; gap:14px; align-items:center; background:var(--card); border-radius:20px; padding:12px; }
+  .bigL { width:76px; height:76px; border-radius:18px; background:#facc15; color:#422006; font-size:52px; font-weight:900; display:grid; place-items:center; flex:0 0 auto; }
+  .bname { font-size:24px; font-weight:900; } .binfo { color:var(--muted); font-size:16px; font-weight:600; }
+  .okbar { background:#14532d; border-radius:14px; padding:10px; margin-top:10px; font-weight:800; text-align:center; }
+  .prevbox { background:#1e293b; border-radius:14px; padding:12px; margin-top:10px; font-size:18px; text-align:center; }
+  .prevbox b { font-size:22px; } .prevbox span { color:var(--muted); font-size:15px; }
+  .stepT { font-size:20px; font-weight:900; margin:18px 0 6px; }
+  .phrow { display:flex; gap:12px; align-items:center; } .thumb { width:120px; height:90px; object-fit:cover; border-radius:12px; border:3px solid var(--green); }
+  .numdisp { font-family:ui-monospace,monospace; font-size:44px; font-weight:900; text-align:right; background:#000; color:#4ade80; border:3px solid var(--line);
+    border-radius:16px; padding:10px 14px; letter-spacing:1px; } .numdisp small { font-size:16px; color:var(--muted); margin-left:8px; }
+  .numdisp.bad { color:#f87171; border-color:var(--red); } .numdisp.warnc { color:#fbbf24; border-color:var(--amber); }
+  .diff { text-align:center; font-size:20px; margin:8px 0; } .diff.good b { color:#4ade80; } .diff.warnc b { color:#fbbf24; }
+  .keypad { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px; }
+  .key { font-size:32px; font-weight:900; padding:16px 0; border-radius:16px; border:2px solid var(--line); background:var(--card); color:var(--text); }
+  .key:active { background:#0c4a6e; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+  .chip2 { border:2px solid var(--line); background:var(--card); color:var(--text); border-radius:999px; padding:10px 14px; font-size:17px; font-weight:700; }
+  .chip2.on { border-color:var(--blue); background:#0c4a6e; }
+  #torchBtn.on { background:#facc15; color:#422006; }
 </style>
 </head>
 <body>
@@ -129,10 +172,13 @@
   <div class="bottom">
     <button class="btn ghost" id="cancelScan"></button>
     <button class="btn amber" id="noqrBtn" style="display:none"></button>
+    <button class="btn ghost" id="torchBtn" style="display:none"></button>
+    <button class="big" id="shutterBtn" style="display:none;margin-top:8px"></button>
   </div>
 </div>
 
 <div class="panel" id="flow"><div class="wrap" id="flowIn"></div></div>
+<div class="panel" id="solar"><div class="wrap" id="solarIn"></div></div>
 <div class="panel" id="result"><div class="wrap" id="resultIn"></div></div>
 <div id="banner"></div>
 
@@ -142,5 +188,6 @@
 <script src="common.js"></script>
 <script src="i18n.js"></script>
 <script src="guard.js"></script>
+<script src="solar.js"></script>
 </body>
 </html>
