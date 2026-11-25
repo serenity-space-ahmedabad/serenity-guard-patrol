@@ -262,8 +262,9 @@ async function loadHome() {
   if (error) { toast(error.message, "err"); if (/not a guard|inactive/i.test(error.message)) { await sb.auth.signOut(); home = null; renderLogin(error.message); } return; }
   const prevSolar = home?.solar;
   home = data; SSP.syncServer(data.server_now);
-  const sol = await sb.rpc("solar_today").catch(() => ({}));
-  home.solar = sol && !sol.error ? sol.data : prevSolar;
+  // solar is optional: never let it stop the home screen from loading
+  try { const sol = await sb.rpc("solar_today"); home.solar = sol && !sol.error ? sol.data : prevSolar; }
+  catch (e) { home.solar = prevSolar; }
   detectNewRounds();
   if ((!$("result").style.display || $("result").style.display === "none") && $("solar").style.display !== "block") renderHome();
 }
